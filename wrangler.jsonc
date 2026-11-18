@@ -1,0 +1,17 @@
+// Cloudflare Workers: aplicația din app/ (pagini statice + Durable Object pentru planul comun).
+// „name” trebuie să fie același cu numele Worker-ului din dashboard-ul Cloudflare.
+{
+  "name": "planapartament",
+  "main": "app/worker/index.js",
+  "compatibility_date": "2025-11-01",
+  "build": { "cwd": "app", "command": "npm install --no-audit --no-fund && npm run build" },
+  "assets": {
+    "directory": "app/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": { "bindings": [{ "name": "PLAN", "class_name": "PlanDO" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PlanDO"] }],
+  "observability": { "enabled": true }
+}

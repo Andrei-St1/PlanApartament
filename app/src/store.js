@@ -1,5 +1,5 @@
 /* Starea comună a planului: se încarcă de pe server, modificările se trimit ca operații
-   și ajung live (Server-Sent Events) la toți cei care au pagina deschisă. */
+   și ajung live (WebSocket) la toți cei care au pagina deschisă. */
 
 const CLIENT = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -9,7 +9,7 @@ export function createStore() {
   const listeners = new Set();
   const queue = [];            // operații de trimis, în ordine
   const timers = new Map();    // id -> {t, item} pentru modificări cu întârziere (text)
-  let sending = false, es = null, closed = false;
+  let sending = false, ws = null, closed = false, pingT = null;
 
   const emit = () => listeners.forEach(f => f());
   const setStatus = s => { if (status !== s) { status = s; emit(); } };
@@ -67,16 +67,22 @@ export function createStore() {
   }
 
   function connect() {
-    es = new EventSource('/api/events');
-    es.onopen = () => setStatus(queue.length ? 'saving' : 'live');
-    es.onmessage = e => {
+    if (closed) return;
+    const sock = ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/ws');
+    sock.onopen = () => setStatus(queue.length || timers.size ? 'saving' : 'live');
+    sock.onmessage = e => {
+      if (e.data === 'pong') return;
       let m; try { m = JSON.parse(e.data); } catch { return; }
       if (m.type === 'hello') { if (m.rev !== rev) load(); return; }
       if (m.type === 'presence') { if (online !== m.n) { online = m.n; emit(); } return; }
       if (loading) { buffered.push(m); return; }
       onRemote(m);
     };
-    es.onerror = () => setStatus('offline');   // EventSource se reconectează singur
+    sock.onclose = () => {
+      if (ws !== sock) return;
+      ws = null; if (closed) return;
+      setStatus('offline'); setTimeout(connect, 3000);   // ne reconectăm singuri
+    };
   }
 
   async function pump() {
@@ -97,7 +103,7 @@ export function createStore() {
       }
     }
     sending = false;
-    setStatus(es && es.readyState === 1 ? 'live' : 'offline');
+    setStatus(ws && ws.readyState === 1 ? 'live' : 'offline');
   }
 
   function send(op) { queue.push({ op }); pump(); }
@@ -109,8 +115,11 @@ export function createStore() {
     getStatus: () => status,
     getOnline: () => online,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-    start() { connect(); load(); },
-    stop() { closed = true; es && es.close(); },
+    start() {
+      connect(); load();
+      pingT = setInterval(() => { if (ws && ws.readyState === 1) ws.send('ping'); }, 25000);   // ține conexiunea deschisă
+    },
+    stop() { closed = true; clearInterval(pingT); ws && ws.close(); },
     /** număr nou pentru un element (serverul îl poate corecta dacă e deja folosit) */
     nextN() { const n = state.next; state = { ...state, next: n + 1 }; return n; },
     /** adaugă sau modifică un element; delay > 0 grupează modificările rapide (ex. textul tastat) */
