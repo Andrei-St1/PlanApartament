@@ -59,11 +59,12 @@ export function roomAt(px, py) {
 export const ABBR = n => n.replace('Priză dublă + TV + internet', 'Pr. dublă+TV+net').replace('Priză TV / internet', 'Pr. TV/net').replace(/^Priză/, 'Pr.').replace(/^Întrerupător/, 'Într.').replace(/^Comutator/, 'Com.');
 export const SUB = {
   p1: { cat: 'socket', name: 'Priză simplă', mods: 1 }, p2: { cat: 'socket', name: 'Priză dublă', mods: 2 },
-  p3: { cat: 'socket', name: 'Priză triplă', mods: 3 },
+  p3: { cat: 'socket', name: 'Priză triplă', mods: 3 }, p4: { cat: 'socket', name: 'Priză cvadruplă', mods: 4 },
   pc: { cat: 'socket', name: 'Priză dublă + TV + internet', mods: 4, pow: 2, data: true, net: true, tv: true },
   pt: { cat: 'socket', name: 'Priză TV / internet', mods: 1, data: true, net: true, tv: true },
   pi: { cat: 'socket', name: 'Priză internet', mods: 1, data: true, net: true }, pv: { cat: 'socket', name: 'Priză TV', mods: 1, data: true, tv: true },
   s1: { cat: 'switch', name: 'Întrerupător simplu', mods: 1, rock: 1 }, s2: { cat: 'switch', name: 'Întrerupător dublu', mods: 1, rock: 2 },
+  s3: { cat: 'switch', name: 'Întrerupător triplu', mods: 1, rock: 3 },
   sc: { cat: 'switch', name: 'Comutator cap-scară', mods: 1, rock: 1, cap: true },
   t: { cat: 'text', name: 'Notă text', mods: 0 },
   tb: { cat: 'panel', name: 'Tablou electric', mods: 0 },

@@ -89,8 +89,10 @@ app.post('/api/history/:id/restore', (req, res) => {
 /* aplicația construită (npm run build) */
 const DIST = path.join(ROOT, 'dist');
 if (fs.existsSync(DIST)) {
-  app.use(express.static(DIST, { index: 'index.html', maxAge: '1h' }));
-  app.get('*', (req, res, next) => (req.path.startsWith('/api/') ? next() : res.sendFile(path.join(DIST, 'index.html'))));
+  // index.html se verifică la fiecare încărcare, ca toți să primească imediat versiunea nouă
+  const noCache = res => res.set('Cache-Control', 'no-cache');
+  app.use(express.static(DIST, { index: 'index.html', maxAge: '1h', setHeaders: (res, f) => { if (f.endsWith('.html')) noCache(res); } }));
+  app.get('*', (req, res, next) => (req.path.startsWith('/api/') ? next() : (noCache(res), res.sendFile(path.join(DIST, 'index.html')))));
 }
 
 const server = app.listen(PORT, () => console.log(`Planul rulează pe http://localhost:${PORT}  (date în ${DATA_DIR})`));

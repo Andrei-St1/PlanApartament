@@ -2,7 +2,7 @@
    O folosesc atât serverul Node (server.js), cât și varianta Cloudflare (worker/index.js). */
 
 export const MAX_ITEMS = 1500, MAX_HISTORY = 100, SNAPSHOT_EVERY_MS = 5 * 60 * 1000;
-const SUBS = new Set(['p1', 'p2', 'p3', 'pc', 'pt', 'pi', 'pv', 's1', 's2', 'sc', 't', 'tb']);
+const SUBS = new Set(['p1', 'p2', 'p3', 'p4', 'pc', 'pt', 'pi', 'pv', 's1', 's2', 's3', 'sc', 't', 'tb']);
 
 export const emptyPlan = () => ({ state: { items: [], next: 1 }, rev: 0 });
 export const newHistoryId = now => now.toString(36) + Math.random().toString(36).slice(2, 6);

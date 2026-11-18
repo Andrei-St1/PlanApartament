@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import * as THREE from 'three';
 import { PlanScene } from './plan/scene.js';
 import { H, ROOMS, SUB, CAT, ABBR, hasPower, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
@@ -25,7 +25,8 @@ export default function App() {
   const plan = useSyncExternalStore(store.subscribe, store.getState);
   const status = useSyncExternalStore(store.subscribe, store.getStatus);
   const online = useSyncExternalStore(store.subscribe, store.getOnline);
-  const items = plan.items;
+  // elementele de un tip pe care această versiune a paginii nu-l cunoaște (pagină veche, tip nou) sunt ignorate
+  const items = useMemo(() => plan.items.filter(i => SUB[i.sub]), [plan.items]);
 
   const stageRef = useRef(null), sceneRef = useRef(null);
   const [bootErr, setBootErr] = useState(null);
