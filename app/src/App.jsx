@@ -44,6 +44,7 @@ export default function App() {
   const [showLabels, setShowLabels] = useState(() => ls.get('plan-labels', true));
   const [RS, setRS] = useState(() => ({ mode: 'par', max: 8, ...ls.get('plan-rs', {}), on: false }));
   const [routeRes, setRouteRes] = useState(null);
+  const [visitor, setVisitor] = useState(() => ls.get('plan-visitor', false));
 
   const hintT = useRef(), toastT = useRef();
   const showHint = t => { setHint({ t, on: true }); clearTimeout(hintT.current); hintT.current = setTimeout(() => setHint(h => ({ ...h, on: false })), 3200); };
@@ -55,7 +56,7 @@ export default function App() {
 
   /* ultima stare, pentru apelurile venite din scena 3D */
   const L = useRef();
-  L.current = { mode, curSub, hmode, moving, items };
+  L.current = { mode, curSub, hmode, moving, items, visitor };
 
   /* ---------- scena 3D ---------- */
   useEffect(() => {
@@ -81,6 +82,7 @@ export default function App() {
 
   function onTap({ itemId, wall, walk }) {
     const s = L.current;
+    if (s.visitor) return;   // în modul vizitator planul doar se privește
     if (itemId && !s.moving) { select(itemId); return; }
     if (!walk) { if (s.moving || s.mode !== 'nav') showHint('Ca să pui ceva pe perete, intră într-o cameră din meniul de sus'); else select(null); return; }
     if (!wall) { if (s.mode === 'nav' && !s.moving) select(null); return; }
@@ -174,6 +176,12 @@ export default function App() {
     navigator.clipboard.writeText(txt).then(() => showToast('Copiat în clipboard')).catch(() => setModal({ kind: 'copy', txt }));
   }
 
+  function toggleVisitor() {
+    const v = !visitor; setVisitor(v); ls.set('plan-visitor', v);
+    if (v) { setMode('nav'); setMoving(null); select(null); }
+    showHint(v ? 'Mod vizitator: poți doar să te uiți prin apartament' : 'Mod editare: poți pune din nou prize și întrerupătoare');
+  }
+
   const cnt = countByCat(items);
   const syncInfo = {
     live: ['☁ Salvat · live' + (online > 1 ? ` · ${online} online` : ''), 'ok', 'Modificările se salvează pe server și le văd toți cei care au pagina deschisă'],
@@ -199,17 +207,18 @@ export default function App() {
         <button className={'btn' + (RS.on ? ' on' : '')} onClick={toggleRoutes}>⚡ Trasee</button>
         <button className="btn" onClick={() => setModal({ kind: 'list' })}>Listă</button>
         <button className="btn" onClick={() => setModal({ kind: 'options' })}>⋯</button>
+        <button className={'btn' + (visitor ? ' on' : '')} onClick={toggleVisitor} title="Ascunde butoanele de editare">👁 Vizitator</button>
       </div>
 
       <div id="stage" ref={stageRef}>
         {bootErr && <div id="boot"><div><b>Planul nu s-a putut porni.</b><br />{bootErr}</div></div>}
         <div id="hint" style={{ opacity: hint.on ? 1 : 0 }}>{hint.t}</div>
-        <div id="legend">
+        {!visitor && <div id="legend">
           <div><i style={{ background: CAT.socket.c }}></i><b>Prize</b> {cnt.socket}</div>
           <div><i style={{ background: CAT.switch.c }}></i><b>Întrerupătoare</b> {cnt.switch}</div>
           <div><i style={{ background: CAT.text.c }}></i><b>Note</b> {cnt.text}</div>
           <div><i style={{ background: CAT.panel.c }}></i><b>Tablou</b> {cnt.panel ? 'da' : '–'}</div>
-        </div>
+        </div>}
         {walk && <Joystick scene={sceneRef} />}
         {RS.on && routeRes && (
           <div id="rcard">
@@ -220,12 +229,12 @@ export default function App() {
             </>}
           </div>
         )}
-        {sel && <Sheet it={sel} items={items} pm={pm} link={link} unlink={unlink} moving={moving === sel.id} update={update} setH={setH}
+        {sel && !visitor && <Sheet it={sel} items={items} pm={pm} link={link} unlink={unlink} moving={moving === sel.id} update={update} setH={setH}
           onMove={() => { setMoving(sel.id); showHint('Atinge noul loc pe perete (înălțimea rămâne aceeași)'); }}
           onDup={dup} onDel={del} onDone={() => select(null)} />}
       </div>
 
-      <div id="tools">
+      {!visitor && <div id="tools">
         <div className="row">
           {[['nav', '✋', 'Navighează'], ['socket', '🔌', 'Priză'], ['switch', '💡', 'Întrerupător'], ['text', '✏️', 'Text'], ['panel', '🗄️', 'Tablou']].map(([m, ic, t]) => (
             <button key={m} className={'btn mode' + (mode === m ? ' on' : '')} onClick={() => {
@@ -249,7 +258,7 @@ export default function App() {
             <button className={'chip hm' + (hmode === 'std' ? ' on' : '')} onClick={() => setHmode('std')}>standard ({CAT[mode].std} cm)</button>
           </div>
         )}
-      </div>
+      </div>}
 
       {modal && <Modal modal={modal} setModal={setModal} items={items} plan={plan} copy={copy} showToast={showToast}
         showLabels={showLabels} setShowLabels={setShowLabels} sceneRef={sceneRef} select={select}
