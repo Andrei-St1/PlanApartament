@@ -2,7 +2,7 @@
    Scena desenează apartamentul și elementele; deciziile (ce se întâmplă la o atingere) le ia aplicația. */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { H, CX, CZ, WALLS, ROOMS, SUB, CAT, ABBR, roomAt, isFree } from './geometry.js';
+import { H, CX, CZ, WALLS, ROOMS, SUB, CAT, ABBR, roomAt, isFree, partnersOf } from './geometry.js';
 
 /* ce are fiecare modul al unei prize: 'pow' (230 V), 'tv', 'net' sau 'data' (TV și/sau internet în același modul) */
 const modKind = (sub, i) => !sub.data ? 'pow' : sub.pow ? (i < sub.pow ? 'pow' : i === sub.pow ? 'tv' : 'net') : 'data';
@@ -155,6 +155,8 @@ export class PlanScene {
   labelTexture(it) {
     const sub = SUB[it.sub], cat = CAT[sub.cat];
     const lines = [`#${it.n}  ${ABBR(sub.name)}`, `h = ${Math.round(it.h * 100)} cm`];
+    const pr = this.partners && this.partners.get(it.id);
+    if (pr) lines.push('cuplat cu ' + pr.map(p => '#' + p.n).join(', '));
     if (it.text) lines.push(it.text);
     const font = i => (i === 1 ? '700 58px ' : i === 0 ? '700 54px ' : 'italic 600 58px ') + 'sans-serif';
     const mc = document.createElement('canvas').getContext('2d'); let tw = 0;
@@ -222,7 +224,7 @@ export class PlanScene {
           const rc = sub.rock;
           for (let j = 0; j < rc; j++) {
             const rw = 0.052 / rc - 0.002; const r = new THREE.Mesh(new THREE.BoxGeometry(rw, 0.056, 0.006), mat.rock); r.position.set(cx - 0.026 + rw / 2 + 0.001 + j * (rw + 0.002), 0, 0.017); body.add(r);
-            const dot = new THREE.Mesh(new THREE.BoxGeometry(rw * 0.4, 0.004, 0.002), sub.cap ? mat.cat.switch : mat.mark); dot.position.set(r.position.x, 0.02, 0.0205); body.add(dot);
+            const dot = new THREE.Mesh(new THREE.BoxGeometry(rw * 0.4, 0.004, 0.002), (sub.cap || sub.cross) ? mat.cat.switch : mat.mark); dot.position.set(r.position.x, 0.02, 0.0205); body.add(dot);
           }
         }
       }
@@ -264,10 +266,14 @@ export class PlanScene {
   /** Sincronizează scena cu lista de elemente (obiectele noi sau schimbate se redesenează). */
   setItems(items) {
     const seen = new Set();
+    this.partners = partnersOf(items);
+    if (!this.linkSig) this.linkSig = new Map();
     for (const it of items) {
       seen.add(it.id);
-      if (this.itemRefs.get(it.id) !== it) { this.itemRefs.set(it.id, it); this.build(it); }
+      const sig = (this.partners.get(it.id) || []).map(p => p.n).join(',');   // eticheta se schimbă și când se cuplează altcineva cu el
+      if (this.itemRefs.get(it.id) !== it || this.linkSig.get(it.id) !== sig) { this.itemRefs.set(it.id, it); this.linkSig.set(it.id, sig); this.build(it); }
     }
+    for (const id of [...this.linkSig.keys()]) if (!seen.has(id)) this.linkSig.delete(id);
     for (const id of [...this.itemRefs.keys()]) if (!seen.has(id)) { this.itemRefs.delete(id); this.remove3d(id); }
   }
   setSelected(id) {

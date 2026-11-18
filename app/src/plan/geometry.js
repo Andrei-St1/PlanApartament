@@ -66,9 +66,31 @@ export const SUB = {
   s1: { cat: 'switch', name: 'Întrerupător simplu', mods: 1, rock: 1 }, s2: { cat: 'switch', name: 'Întrerupător dublu', mods: 1, rock: 2 },
   s3: { cat: 'switch', name: 'Întrerupător triplu', mods: 1, rock: 3 },
   sc: { cat: 'switch', name: 'Comutator cap-scară', mods: 1, rock: 1, cap: true },
+  sx: { cat: 'switch', name: 'Comutator cruce', mods: 1, rock: 1, cross: true },
   t: { cat: 'text', name: 'Notă text', mods: 0 },
   tb: { cat: 'panel', name: 'Tablou electric', mods: 0 },
 };
+/* Comutatoare care se cuplează între ele (aceeași lumină din mai multe locuri).
+   Legătura se ține într-un singur element: a.pair = id-ul lui b. */
+export const isLinkable = s => !!(s && (s.cap || s.cross));
+export const maxLinks = s => (s && s.cross ? 2 : 1);
+export function switchLinks(items) {
+  const by = new Map(items.map(i => [i.id, i])), seen = new Set(), out = [];
+  for (const a of items) {
+    const b = a.pair && by.get(a.pair);
+    if (!b || b === a || !isLinkable(SUB[a.sub]) || !isLinkable(SUB[b.sub])) continue;
+    const k = a.id < b.id ? a.id + '|' + b.id : b.id + '|' + a.id;
+    if (!seen.has(k)) { seen.add(k); out.push([a, b]); }
+  }
+  return out;
+}
+/** id -> lista elementelor cuplate cu el */
+export function partnersOf(items) {
+  const m = new Map();
+  for (const [a, b] of switchLinks(items)) { (m.get(a.id) || m.set(a.id, []).get(a.id)).push(b); (m.get(b.id) || m.set(b.id, []).get(b.id)).push(a); }
+  return m;
+}
+
 /* are alimentare 230 V (prize normale și cele combinate) */
 export const hasPower = s => s.cat === 'socket' && (!s.data || !!s.pow);
 export const CAT = {
@@ -139,10 +161,11 @@ export function countByCat(items) {
 }
 export function listText(items) {
   let out = 'Ap. 3, Str. Pârâului 15, Brașov – prize și întrerupătoare (înălțimi de la pardoseală)\n';
-  let last;
+  let last; const pm = partnersOf(items);
   for (const it of sortedByRoom(items)) {
     if (it.room !== last) { const r = roomByN(it.room); out += '\n' + (r ? roomLabel(r) : 'Fără cameră') + '\n'; last = it.room; }
-    out += `  #${it.n} ${SUB[it.sub].name} – ${Math.round(it.h * 100)} cm${it.text ? ' – ' + it.text : ''}\n`;
+    const pr = pm.get(it.id);
+    out += `  #${it.n} ${SUB[it.sub].name} – ${Math.round(it.h * 100)} cm${pr ? ' – cuplat cu ' + pr.map(p => '#' + p.n).join(', ') : ''}${it.text ? ' – ' + it.text : ''}\n`;
   }
   const c = countByCat(items);
   return out + `\nTotal: ${c.socket} prize, ${c.switch} întrerupătoare`;

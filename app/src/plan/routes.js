@@ -1,5 +1,5 @@
 /* Calculul traseelor de cablu prin șapă (portat din planul original) */
-import { GC, GX, GY, NC, wallCell, doorCell, nearW, ROOMS, SUB, CX, CZ, hasPower } from './geometry.js';
+import { GC, GX, GY, NC, wallCell, doorCell, nearW, ROOMS, SUB, CX, CZ, hasPower, switchLinks } from './geometry.js';
 
 export const SCREED = 0.05;
 const TURN = 0.3;
@@ -101,7 +101,7 @@ export function computeRoutes(items, RS) {
   };
   // grupare pe circuite
   const groups = [], cat = it => SUB[it.sub].cat;
-  const sock = devs.filter(i => hasPower(SUB[i.sub])), data = devs.filter(i => SUB[i.sub].data), sw = devs.filter(i => cat(i) === 'switch');
+  const sock = devs.filter(i => hasPower(SUB[i.sub])), data = devs.filter(i => SUB[i.sub].data), sw = devs.filter(i => cat(i) === 'switch' && !SUB[i.sub].cross);   // comutatorul cruce e legat doar prin firele de comutare
   const pd = it => D(panel, it);
   const cluster = (list, max, prefix, kind) => {
     const byRoom = new Map(); list.forEach(i => { const k = i.room ?? -1; if (!byRoom.has(k)) byRoom.set(k, []); byRoom.get(k).push(i); });
@@ -124,12 +124,17 @@ export function computeRoutes(items, RS) {
   const net = data.filter(i => SUB[i.sub].net), tvs = data.filter(i => SUB[i.sub].tv);
   if (net.length) groups.push({ kind: 'data', net: true, items: net, name: 'Internet (cablu separat la fiecare priză)' });
   if (tvs.length) groups.push({ kind: 'data', items: tvs, name: 'TV (cablu separat la fiecare priză)' });
+  // legăturile dintre comutatoarele cap-scară / cruce (2 fire de comutare + împământare)
+  for (const [a, b] of switchLinks(items)) {
+    const [x, y] = a.n < b.n ? [a, b] : [b, a];
+    groups.push({ kind: 'trav', items: [x, y], name: `Cap-scară #${x.n} ↔ #${y.n} (${[...new Set([x.room, y.room])].map(roomShort).join(', ')})` });
+  }
   // ordonare + lungimi
   const tot = {};
   groups.forEach((g, gi) => {
     g.color = PAL[gi % PAL.length]; g.edges = [];
     let seq = g.items;
-    if (g.kind !== 'data' && seq.length > 1) {
+    if (g.kind !== 'data' && g.kind !== 'trav' && seq.length > 1) {
       let rem = [...seq], cur = panel; seq = [];
       while (rem.length) { let bi = 0, bd = Infinity; rem.forEach((x, i) => { const d = D(cur, x); if (d < bd) { bd = d; bi = i; } }); cur = rem.splice(bi, 1)[0]; seq.push(cur); }
       const T = s => { let t = D(panel, s[0]); for (let i = 1; i < s.length; i++) t += D(s[i - 1], s[i]); return t - vDrop(s[s.length - 1]); };
@@ -142,16 +147,16 @@ export function computeRoutes(items, RS) {
         }
       }
     }
-    g.seq = seq; g.cross = 0; let floor = 0; const boxes = seq.length + 1;
-    const links = g.kind === 'data' ? seq.map(x => [panel, x]) : seq.map((x, i) => [i ? seq[i - 1] : panel, x]);
+    g.seq = seq; g.cross = 0; let floor = 0; const boxes = g.kind === 'trav' ? 2 : seq.length + 1;
+    const links = g.kind === 'trav' ? [[seq[0], seq[1]]] : g.kind === 'data' ? seq.map(x => [panel, x]) : seq.map((x, i) => [i ? seq[i - 1] : panel, x]);
     for (const [a, b] of links) {
       const p = path(a, b), pa = port.get(a.id), pb = port.get(b.id);
       floor += p.len + pa.stub + pb.stub; g.cross += p.cross; g.edges.push({ a, b, pts: p.pts, pa, pb });
     }
-    const vert = g.kind === 'data' ? seq.reduce((s, x) => s + vDrop(panel) + vDrop(x), 0) : vDrop(panel) + seq.reduce((s, x, i) => s + vDrop(x) * (i < seq.length - 1 ? 2 : 1), 0);
+    const vert = g.kind === 'trav' ? vDrop(seq[0]) + vDrop(seq[1]) : g.kind === 'data' ? seq.reduce((s, x) => s + vDrop(panel) + vDrop(x), 0) : vDrop(panel) + seq.reduce((s, x, i) => s + vDrop(x) * (i < seq.length - 1 ? 2 : 1), 0);
     g.floor = floor; g.vert = vert; g.ceilLen = 0; g.len = floor + vert; g.cable = g.len + 0.3 * boxes; g.tube = floor + vert;
-    g.type = g.kind === 'light' ? 'CYY-F 3×1,5 mm²' : g.kind === 'data' ? (g.net ? 'UTP Cat6 (internet)' : 'Coaxial RG6 (TV)') : 'CYY-F 3×2,5 mm²';
-    g.prot = g.kind === 'light' ? 'MCB C10 A' : g.kind === 'data' ? '–' : g.kind === 'ded' ? 'MCB C16–C25 A după aparat + diferențial 30 mA' : 'MCB C16 A + diferențial 30 mA';
+    g.type = g.kind === 'light' || g.kind === 'trav' ? 'CYY-F 3×1,5 mm²' : g.kind === 'data' ? (g.net ? 'UTP Cat6 (internet)' : 'Coaxial RG6 (TV)') : 'CYY-F 3×2,5 mm²';
+    g.prot = g.kind === 'trav' ? 'parte din circuitul de iluminat' : g.kind === 'light' ? 'MCB C10 A' : g.kind === 'data' ? '–' : g.kind === 'ded' ? 'MCB C16–C25 A după aparat + diferențial 30 mA' : 'MCB C16 A + diferențial 30 mA';
     tot[g.type] = (tot[g.type] || 0) + g.cable;
   });
   return { groups, tot, panel, port, tube: groups.reduce((s, g) => s + g.tube, 0) };
@@ -162,7 +167,7 @@ export const fm = v => v.toFixed(1).replace('.', ',');
 export function routeText(res, RS) {
   let t = 'TRASEE CABLURI – Ap. 3, Str. Pârâului 15 (prin șapă, ' + (RS.mode === 'par' ? 'paralel cu pereții' : 'drum cel mai scurt') + ')\n';
   res.groups.forEach((g, i) => {
-    t += `\nC${i + 1}. ${g.name}\n   ${g.type} · ${g.prot}\n   traseu ${fm(g.len)} m (șapă ${fm(g.floor)} + pereți ${fm(g.vert)}) · cablu cu rezervă ~${fm(g.cable)} m\n   ordine: tablou → ${g.seq.map(x => '#' + x.n).join(' → ')}${g.cross ? ' · ' + g.cross + ' străpungeri de perete' : ''}\n`;
+    t += `\nC${i + 1}. ${g.name}\n   ${g.type} · ${g.prot}\n   traseu ${fm(g.len)} m (șapă ${fm(g.floor)} + pereți ${fm(g.vert)}) · cablu cu rezervă ~${fm(g.cable)} m\n   ${g.kind === 'trav' ? 'între comutatoare: #' + g.seq[0].n + ' ↔ #' + g.seq[1].n : 'ordine: tablou → ' + g.seq.map(x => '#' + x.n).join(' → ')}${g.cross ? ' · ' + g.cross + ' străpungeri de perete' : ''}\n`;
   });
   t += '\nTOTAL (cu rezervă în doze, fără marjă):\n';
   for (const [k, v] of Object.entries(res.tot)) t += `   ${k}: ~${Math.round(v)} m\n`;

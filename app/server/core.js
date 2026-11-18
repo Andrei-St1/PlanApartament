@@ -2,7 +2,7 @@
    O folosesc atât serverul Node (server.js), cât și varianta Cloudflare (worker/index.js). */
 
 export const MAX_ITEMS = 1500, MAX_HISTORY = 100, SNAPSHOT_EVERY_MS = 5 * 60 * 1000;
-const SUBS = new Set(['p1', 'p2', 'p3', 'p4', 'pc', 'pt', 'pi', 'pv', 's1', 's2', 's3', 'sc', 't', 'tb']);
+const SUBS = new Set(['p1', 'p2', 'p3', 'p4', 'pc', 'pt', 'pi', 'pv', 's1', 's2', 's3', 'sc', 'sx', 't', 'tb']);
 
 export const emptyPlan = () => ({ state: { items: [], next: 1 }, rev: 0 });
 export const newHistoryId = now => now.toString(36) + Math.random().toString(36).slice(2, 6);
@@ -17,6 +17,7 @@ export function cleanItem(it) {
   const out = { id: it.id, n: Number.isInteger(it.n) && it.n > 0 && it.n < 100000 ? it.n : 0, sub: it.sub, x: it.x, z: it.z, nx: it.nx, nz: it.nz, h: it.h,
     text: typeof it.text === 'string' ? it.text.slice(0, 60) : '', room: Number.isInteger(it.room) ? it.room : null };
   if (it.ded === true) out.ded = true;
+  if (typeof it.pair === 'string' && it.pair !== it.id && /^[A-Za-z0-9_-]{1,40}$/.test(it.pair)) out.pair = it.pair;
   return out;
 }
 

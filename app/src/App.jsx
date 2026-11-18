@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import * as THREE from 'three';
 import { PlanScene } from './plan/scene.js';
-import { H, ROOMS, SUB, CAT, ABBR, hasPower, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
+import { H, ROOMS, SUB, CAT, ABBR, hasPower, isLinkable, maxLinks, partnersOf, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
 import { computeRoutes, routeText, fm } from './plan/routes.js';
 import { createStore } from './store.js';
 
@@ -130,6 +130,18 @@ export default function App() {
     const c = { ...sel, id: newId(), n: store.nextN(), x: sel.x + t.x * w, z: sel.z + t.z * w };
     store.upsert(c); select(c.id); showHint('Copiat alături – folosește „Mută” dacă vrei alt loc');
   }
+  /* cuplarea comutatoarelor cap-scară / cruce */
+  const pm = useMemo(() => partnersOf(items), [items]);
+  const pairOk = x => !!x.pair && (pm.get(x.id) || []).some(p => p.id === x.pair);
+  function link(a, b) {
+    if (!pairOk(a)) store.upsert({ ...a, pair: b.id });
+    else if (!pairOk(b)) store.upsert({ ...b, pair: a.id });
+    else showToast('Nu le pot cupla: ambele au deja legături');
+  }
+  function unlink(a, b) {
+    if (a.pair === b.id) store.upsert({ ...a, pair: undefined });
+    if (b.pair === a.id) store.upsert({ ...b, pair: undefined });
+  }
   function del() {
     if (!sel) return; const it = sel;
     store.remove(it.id); select(null);
@@ -187,7 +199,7 @@ export default function App() {
             </>}
           </div>
         )}
-        {sel && <Sheet it={sel} moving={moving === sel.id} update={update} setH={setH}
+        {sel && <Sheet it={sel} items={items} pm={pm} link={link} unlink={unlink} moving={moving === sel.id} update={update} setH={setH}
           onMove={() => { setMoving(sel.id); showHint('Atinge noul loc pe perete (înălțimea rămâne aceeași)'); }}
           onDup={dup} onDel={del} onDone={() => select(null)} />}
       </div>
@@ -249,7 +261,7 @@ function Joystick({ scene }) {
 }
 
 /* ---------- foaia de editare a unui element ---------- */
-function Sheet({ it, moving, update, setH, onMove, onDup, onDel, onDone }) {
+function Sheet({ it, items, pm, link, unlink, moving, update, setH, onMove, onDup, onDel, onDone }) {
   const s = SUB[it.sub], r = roomByN(it.room), hcm = Math.round(it.h * 100);
   const [hv, setHv] = useState(String(hcm));
   useEffect(() => setHv(String(hcm)), [hcm, it.id]);
@@ -279,6 +291,23 @@ function Sheet({ it, moving, update, setH, onMove, onDup, onDel, onDone }) {
       <div className="f"><label>Text</label>
         <input type="text" placeholder="ex: frigider, TV, aplică pat…" maxLength={60} value={it.text || ''} onChange={e => update({ text: e.target.value }, 400)} />
       </div>
+      {isLinkable(s) && (() => {
+        const partners = pm.get(it.id) || [];
+        const opts = items.filter(o => o.id !== it.id && isLinkable(SUB[o.sub]) && !partners.some(p => p.id === o.id) && (pm.get(o.id) || []).length < maxLinks(SUB[o.sub]));
+        return (
+          <div className="f"><label>Cuplat cu</label>
+            <div className="presets">
+              {partners.map(p => <button key={p.id} className="chip on" title="Decuplează" onClick={() => unlink(it, p)}>#{p.n} ✕</button>)}
+              {partners.length < maxLinks(s) && (opts.length
+                ? <select className="btn" value="" onChange={e => { const t = items.find(x => x.id === e.target.value); if (t) link(it, t); }}>
+                    <option value="">+ cuplează cu…</option>
+                    {opts.map(o => { const rr = roomByN(o.room); return <option key={o.id} value={o.id}>#{o.n} {SUB[o.sub].name}{rr ? ' · ' + roomLabel(rr) : ''}</option>; })}
+                  </select>
+                : <span className="lbl">Pune și celălalt comutator {s.cross ? '(cap-scară sau cruce)' : 'cap-scară'}, apoi cuplează-le aici.</span>)}
+            </div>
+          </div>
+        );
+      })()}
       {hasPower(s) && (
         <label className="chk"><input type="checkbox" checked={!!it.ded} onChange={e => update({ ded: e.target.checked })} />
           <span>Circuit separat – aparat peste 2 kW (cuptor, plită, mașină de spălat, boiler, AC)</span></label>
@@ -301,11 +330,11 @@ function Modal({ modal, setModal, items, plan, copy, showToast, showLabels, setS
     title = 'Listă elemente' + (items.length ? ` (${items.length})` : '');
     if (!items.length) body = <p className="note">Încă nu ați adăugat nimic. Alege jos <b>Priză</b> sau <b>Întrerupător</b> și atinge un perete.</p>;
     else {
-      const rows = []; let last;
+      const rows = []; let last; const pm = partnersOf(items);
       for (const it of sortedByRoom(items)) {
         if (it.room !== last) { const r = roomByN(it.room); rows.push(<tr key={'g' + it.room} className="grp"><td colSpan={4}>{r ? roomLabel(r) : 'Fără cameră'}</td></tr>); last = it.room; }
         rows.push(<tr key={it.id} className="click" onClick={() => { close(); select(it.id); sceneRef.current?.focusItem(it); }}>
-          <td>{it.n}</td><td><span className="tag" style={{ background: CAT[SUB[it.sub].cat].c }}></span>{SUB[it.sub].name}</td><td className="h">{Math.round(it.h * 100)} cm</td><td>{it.text}</td></tr>);
+          <td>{it.n}</td><td><span className="tag" style={{ background: CAT[SUB[it.sub].cat].c }}></span>{SUB[it.sub].name}</td><td className="h">{Math.round(it.h * 100)} cm</td><td>{pm.get(it.id) ? '↔ ' + pm.get(it.id).map(p => '#' + p.n).join(', ') + (it.text ? ' · ' : '') : ''}{it.text}</td></tr>);
       }
       body = <>
         <table><tbody><tr><th>#</th><th>Tip</th><th>Înălțime</th><th>Text</th></tr>{rows}</tbody></table>
@@ -411,7 +440,7 @@ function Routes({ RS, updRS, routeRes, copy }) {
       <tr><th></th><th>Circuit</th><th>Cablu</th><th>Lungime</th></tr>
       {r.groups.map((g, i) => <tr key={i}>
         <td><span className="tag" style={{ background: g.color }}></span>C{i + 1}</td>
-        <td><b>{g.name}</b><br /><span className="lbl">{g.prot} · tablou → {g.seq.map(x => '#' + x.n).join(' → ')}{g.cross ? <> · <b>{g.cross} străpungere{g.cross > 1 ? 'i' : ''} de perete</b></> : null}</span></td>
+        <td><b>{g.name}</b><br /><span className="lbl">{g.prot} · {g.kind === 'trav' ? `#${g.seq[0].n} ↔ #${g.seq[1].n}` : 'tablou → ' + g.seq.map(x => '#' + x.n).join(' → ')}{g.cross ? <> · <b>{g.cross} străpungere{g.cross > 1 ? 'i' : ''} de perete</b></> : null}</span></td>
         <td>{g.type}</td><td className="h">{fm(g.cable)} m</td></tr>)}
     </tbody></table>
     <h4>Total materiale (cu ~30 cm rezervă în fiecare doză)</h4>
