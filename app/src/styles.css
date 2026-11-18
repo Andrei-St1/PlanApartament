@@ -74,7 +74,6 @@ textarea{width:100%;min-height:150px;border:1px solid var(--line);border-radius:
 h4{margin:16px 0 6px;font-size:13.5px}
 #joy{position:absolute;right:14px;bottom:14px;width:118px;height:118px;border-radius:50%;background:rgba(31,35,40,.18);border:2px solid rgba(255,255,255,.7);touch-action:none;z-index:6}
 #knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(31,35,40,.75);border:2px solid #fff;pointer-events:none}
-#joy span{position:absolute;left:0;right:0;top:-22px;text-align:center;font-size:11px;color:#1f2328;font-weight:600;text-shadow:0 0 3px #fff}
 #boot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--err);font-size:15px;z-index:3;background:var(--bg);line-height:1.5}
 #shot{max-width:100%;border-radius:8px;border:1px solid var(--line)}
 .hist td .btn{padding:4px 9px;font-size:12.5px}

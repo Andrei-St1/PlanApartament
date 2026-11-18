@@ -276,7 +276,7 @@ function Joystick({ scene }) {
       onPointerDown={e => { id.current = e.pointerId; ref.current.setPointerCapture(e.pointerId); mv(e); e.stopPropagation(); }}
       onPointerMove={e => { if (e.pointerId === id.current) mv(e); }}
       onPointerUp={end} onPointerCancel={end}>
-      <span>mergi</span><div id="knob" ref={knob}></div>
+      <div id="knob" ref={knob}></div>
     </div>
   );
 }
