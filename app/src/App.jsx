@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import * as THREE from 'three';
 import { PlanScene } from './plan/scene.js';
-import { H, ROOMS, SUB, CAT, ABBR, hasPower, isLinkable, maxLinks, partnersOf, chainOf, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
+import { H, ROOMS, SUB, CAT, ABBR, hasPower, isLinkable, maxLinks, partnersOf, chainOf, roomLabel, roomByN, sortedByRoom, countByCat, listText, roomSummary, summaryText, summaryCsv, SUM_COLS } from './plan/geometry.js';
 import { computeRoutes, routeText, fm } from './plan/routes.js';
 import { createStore } from './store.js';
 
@@ -358,7 +358,26 @@ function Modal({ modal, setModal, items, plan, copy, showToast, showLabels, setS
         rows.push(<tr key={it.id} className="click" onClick={() => { close(); select(it.id); sceneRef.current?.focusItem(it); }}>
           <td>{it.n}</td><td><span className="tag" style={{ background: CAT[SUB[it.sub].cat].c }}></span>{SUB[it.sub].name}</td><td className="h">{Math.round(it.h * 100)} cm</td><td>{pm.get(it.id) ? '↔ ' + pm.get(it.id).map(p => '#' + p.n).join(', ') + (it.text ? ' · ' : '') : ''}{it.text}</td></tr>);
       }
+      const sum = roomSummary(items);
+      const csv = () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([summaryCsv(items)], { type: 'text/csv;charset=utf-8' }));
+        a.download = 'sumar-camere.csv'; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      };
       body = <>
+        <h4 className="sub">Sumar pe camere</h4>
+        <div className="scrollx"><table className="sum"><tbody>
+          <tr><th>Cameră</th>{SUM_COLS.map(c => <th key={c[0]}>{c[1]}</th>)}</tr>
+          {sum.rows.map(r => <tr key={r.label}><td>{r.label}</td>{SUM_COLS.map(c => <td key={c[0]}>{r[c[0]] || '–'}</td>)}</tr>)}
+          <tr className="tot"><td>Total</td>{SUM_COLS.map(c => <td key={c[0]}>{sum.total[c[0]]}</td>)}</tr>
+        </tbody></table></div>
+        <div className="acts">
+          <button className="btn" onClick={() => copy(summaryText(items))}>Copiază sumarul</button>
+          <button className="btn" onClick={csv}>Descarcă tabel (Excel)</button>
+        </div>
+        <p className="note">„Locuri 230 V” numără fiecare loc de ștecher (o priză dublă = 2). Priza TV / internet apare la ambele.</p>
+        <h4 className="sub">Toate elementele</h4>
         <table><tbody><tr><th>#</th><th>Tip</th><th>Înălțime</th><th>Text</th></tr>{rows}</tbody></table>
         <div className="acts"><button className="btn" onClick={() => copy(listText(items))}>Copiază lista ca text</button></div>
         <p className="note">Atinge un rând ca să mergi la element.</p>

@@ -176,3 +176,42 @@ export function listText(items) {
   const c = countByCat(items);
   return out + `\nTotal: ${c.socket} prize, ${c.switch} întrerupătoare`;
 }
+
+/* Sumar pe camere: câte prize, întrerupătoare, internet și TV are fiecare */
+export const SUM_COLS = [
+  ['sock', 'Prize 230 V'], ['outl', 'Locuri 230 V'], ['sw', 'Întrerupătoare'], ['net', 'Internet'], ['tv', 'TV'],
+];
+export function roomSummary(items) {
+  const blank = () => ({ sock: 0, outl: 0, sw: 0, net: 0, tv: 0, types: {} });
+  const by = new Map(), total = blank();
+  for (const it of items) {
+    const s = SUB[it.sub]; if (!s || (s.cat !== 'socket' && s.cat !== 'switch')) continue;
+    if (!by.has(it.room)) by.set(it.room, blank());
+    for (const c of [by.get(it.room), total]) {
+      if (hasPower(s)) { c.sock++; c.outl += s.pow || s.mods; }
+      if (s.cat === 'switch') c.sw++;
+      if (s.net) c.net++;
+      if (s.tv) c.tv++;
+      c.types[it.sub] = (c.types[it.sub] || 0) + 1;
+    }
+  }
+  const rows = ROOMS.filter(r => by.has(r.n)).map(r => ({ label: roomLabel(r), ...by.get(r.n) }));
+  if (by.has(undefined) || by.has(null)) rows.push({ label: 'Fără cameră', ...(by.get(undefined) || by.get(null)) });
+  return { rows, total };
+}
+const typesText = t => Object.keys(SUB).filter(k => t[k]).map(k => `${t[k]} × ${SUB[k].name}`).join(', ');
+export function summaryText(items) {
+  const { rows, total } = roomSummary(items);
+  const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const line = c => `${pl(c.sock, 'priză', 'prize')} (${pl(c.outl, 'loc', 'locuri')} 230 V), ${pl(c.sw, 'întrerupător', 'întrerupătoare')}, ${c.net} internet, ${c.tv} TV`;
+  let out = 'Ap. 3, Str. Pârâului 15, Brașov – sumar pe camere\n';
+  for (const r of rows) out += `\n${r.label}: ${line(r)}\n  ${typesText(r.types)}\n`;
+  return out + `\nTotal: ${line(total)}\n  ${typesText(total.types)}`;
+}
+export function summaryCsv(items) {
+  const { rows, total } = roomSummary(items);
+  const q = v => /[;"\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
+  const head = ['Cameră', ...SUM_COLS.map(c => c[1]), 'Detaliu'];
+  const line = (label, c) => [label, ...SUM_COLS.map(k => c[k[0]]), typesText(c.types)].map(q).join(';');
+  return '﻿' + [head.join(';'), ...rows.map(r => line(r.label, r)), line('Total', total)].join('\r\n');
+}

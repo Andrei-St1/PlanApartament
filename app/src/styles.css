@@ -57,6 +57,12 @@ th{color:var(--mut);font-weight:600;font-size:12px}
 td.h{font-weight:650;white-space:nowrap}
 tr.click{cursor:pointer}
 tr.grp td{background:#f6f4ef;font-weight:650;font-size:12.5px}
+h4.sub{margin:4px 0 6px;font-size:13.5px}
+.scrollx{overflow-x:auto}
+table.sum th:not(:first-child),table.sum td:not(:first-child){text-align:center}
+table.sum th,table.sum td{padding:7px 4px}
+table.sum td:first-child{white-space:nowrap}
+tr.tot td{font-weight:700;border-top:2px solid var(--line)}
 .tag{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
 textarea{width:100%;min-height:150px;border:1px solid var(--line);border-radius:9px;padding:8px;font:12px ui-monospace,Menlo,monospace}
 .menu .btn{display:block;width:100%;text-align:left;margin-bottom:8px;padding:11px 12px}
