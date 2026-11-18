@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import * as THREE from 'three';
 import { PlanScene } from './plan/scene.js';
-import { H, ROOMS, SUB, CAT, ABBR, hasPower, isLinkable, maxLinks, partnersOf, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
+import { H, ROOMS, SUB, CAT, ABBR, hasPower, isLinkable, maxLinks, partnersOf, chainOf, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
 import { computeRoutes, routeText, fm } from './plan/routes.js';
 import { createStore } from './store.js';
 
@@ -133,14 +133,35 @@ export default function App() {
   /* cuplarea comutatoarelor cap-scară / cruce */
   const pm = useMemo(() => partnersOf(items), [items]);
   const pairOk = x => !!x.pair && (pm.get(x.id) || []).some(p => p.id === x.pair);
+  /* modificările pe mai multe elemente se adună și se trimit o singură dată per element */
+  function applyPatches(P) { for (const [id, patch] of P) { const x = items.find(i => i.id === id); if (x) store.upsert({ ...x, ...patch }); } }
+  const patch = (P, x, p) => P.set(x.id, { ...(P.get(x.id) || {}), ...p });
+  /* Cuplare: o lumină din 2 locuri = 2 cap-scară; din 3 sau mai multe = cap-scară la capete și cruce la mijloc.
+     Un cap-scară care primește a doua legătură devine automat comutator cruce. */
   function link(a, b) {
-    if (!pairOk(a)) store.upsert({ ...a, pair: b.id });
-    else if (!pairOk(b)) store.upsert({ ...b, pair: a.id });
-    else showToast('Nu le pot cupla: ambele au deja legături');
+    if (chainOf(pm, a.id).has(b.id)) { showToast('Sunt deja în același lanț'); return; }
+    const P = new Map(), byId = id => items.find(i => i.id === id);
+    if (!pairOk(a)) patch(P, a, { pair: b.id });
+    else if (!pairOk(b)) patch(P, b, { pair: a.id });
+    else {
+      // amândouă au legătura lor proprie ocupată: o mutăm pe partenerul unuia dintre ele, dacă acesta e liber
+      const pa = byId(a.pair), pb = byId(b.pair);
+      if (pa && !pairOk(pa)) { patch(P, pa, { pair: a.id }); patch(P, a, { pair: b.id }); }
+      else if (pb && !pairOk(pb)) { patch(P, pb, { pair: b.id }); patch(P, b, { pair: a.id }); }
+      else { showToast('Nu le pot cupla direct – cuplează-le prin capătul liber al lanțului'); return; }
+    }
+    const conv = [a, b].filter(x => x.sub === 'sc' && (pm.get(x.id) || []).length >= 1);
+    conv.forEach(x => patch(P, x, { sub: 'sx' }));
+    applyPatches(P);
+    if (conv.length) showToast(conv.map(x => '#' + x.n).join(', ') + ' a devenit comutator cruce (e la mijlocul lanțului)');
   }
   function unlink(a, b) {
-    if (a.pair === b.id) store.upsert({ ...a, pair: undefined });
-    if (b.pair === a.id) store.upsert({ ...b, pair: undefined });
+    const P = new Map();
+    if (a.pair === b.id) patch(P, a, { pair: undefined });
+    if (b.pair === a.id) patch(P, b, { pair: undefined });
+    // un comutator cruce rămas cu o singură legătură (sau niciuna) redevine cap-scară
+    for (const x of [a, b]) if (x.sub === 'sx' && (pm.get(x.id) || []).length <= 2) patch(P, x, { sub: 'sc' });
+    applyPatches(P);
   }
   function del() {
     if (!sel) return; const it = sel;
@@ -293,7 +314,8 @@ function Sheet({ it, items, pm, link, unlink, moving, update, setH, onMove, onDu
       </div>
       {isLinkable(s) && (() => {
         const partners = pm.get(it.id) || [];
-        const opts = items.filter(o => o.id !== it.id && isLinkable(SUB[o.sub]) && !partners.some(p => p.id === o.id) && (pm.get(o.id) || []).length < maxLinks(SUB[o.sub]));
+        const chain = chainOf(pm, it.id);
+        const opts = items.filter(o => !chain.has(o.id) && isLinkable(SUB[o.sub]) && (pm.get(o.id) || []).length < maxLinks(SUB[o.sub]));
         return (
           <div className="f"><label>Cuplat cu</label>
             <div className="presets">
@@ -303,7 +325,7 @@ function Sheet({ it, items, pm, link, unlink, moving, update, setH, onMove, onDu
                     <option value="">+ cuplează cu…</option>
                     {opts.map(o => { const rr = roomByN(o.room); return <option key={o.id} value={o.id}>#{o.n} {SUB[o.sub].name}{rr ? ' · ' + roomLabel(rr) : ''}</option>; })}
                   </select>
-                : <span className="lbl">Pune și celălalt comutator {s.cross ? '(cap-scară sau cruce)' : 'cap-scară'}, apoi cuplează-le aici.</span>)}
+                : <span className="lbl">Pune și celălalt comutator cap-scară, apoi cuplează-le aici.</span>)}
             </div>
           </div>
         );

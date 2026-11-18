@@ -73,7 +73,13 @@ export const SUB = {
 /* Comutatoare care se cuplează între ele (aceeași lumină din mai multe locuri).
    Legătura se ține într-un singur element: a.pair = id-ul lui b. */
 export const isLinkable = s => !!(s && (s.cap || s.cross));
-export const maxLinks = s => (s && s.cross ? 2 : 1);
+export const maxLinks = () => 2;   // capetele lanțului au o legătură, cele din mijloc (cruce) două
+/** toate comutatoarele din același lanț cu id */
+export function chainOf(pm, id) {
+  const seen = new Set([id]), st = [id];
+  while (st.length) for (const p of pm.get(st.pop()) || []) if (!seen.has(p.id)) { seen.add(p.id); st.push(p.id); }
+  return seen;
+}
 export function switchLinks(items) {
   const by = new Map(items.map(i => [i.id, i])), seen = new Set(), out = [];
   for (const a of items) {
