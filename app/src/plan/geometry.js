@@ -56,16 +56,20 @@ export function roomAt(px, py) {
 }
 
 /* Tipuri de elemente */
-export const ABBR = n => n.replace('Priză TV / internet', 'Pr. TV/net').replace(/^Priză/, 'Pr.').replace(/^Întrerupător/, 'Într.').replace(/^Comutator/, 'Com.');
+export const ABBR = n => n.replace('Priză dublă + TV + internet', 'Pr. dublă+TV+net').replace('Priză TV / internet', 'Pr. TV/net').replace(/^Priză/, 'Pr.').replace(/^Întrerupător/, 'Într.').replace(/^Comutator/, 'Com.');
 export const SUB = {
   p1: { cat: 'socket', name: 'Priză simplă', mods: 1 }, p2: { cat: 'socket', name: 'Priză dublă', mods: 2 },
-  p3: { cat: 'socket', name: 'Priză triplă', mods: 3 }, pt: { cat: 'socket', name: 'Priză TV / internet', mods: 1, data: true, net: true, tv: true },
+  p3: { cat: 'socket', name: 'Priză triplă', mods: 3 },
+  pc: { cat: 'socket', name: 'Priză dublă + TV + internet', mods: 4, pow: 2, data: true, net: true, tv: true },
+  pt: { cat: 'socket', name: 'Priză TV / internet', mods: 1, data: true, net: true, tv: true },
   pi: { cat: 'socket', name: 'Priză internet', mods: 1, data: true, net: true }, pv: { cat: 'socket', name: 'Priză TV', mods: 1, data: true, tv: true },
   s1: { cat: 'switch', name: 'Întrerupător simplu', mods: 1, rock: 1 }, s2: { cat: 'switch', name: 'Întrerupător dublu', mods: 1, rock: 2 },
   sc: { cat: 'switch', name: 'Comutator cap-scară', mods: 1, rock: 1, cap: true },
   t: { cat: 'text', name: 'Notă text', mods: 0 },
   tb: { cat: 'panel', name: 'Tablou electric', mods: 0 },
 };
+/* are alimentare 230 V (prize normale și cele combinate) */
+export const hasPower = s => s.cat === 'socket' && (!s.data || !!s.pow);
 export const CAT = {
   socket: { c: '#d9641e', std: 30, first: 'p1', pre: [30, 60, 110, 120, 220] },
   switch: { c: '#2b6cb0', std: 110, first: 's1', pre: [90, 100, 110, 120, 150] },

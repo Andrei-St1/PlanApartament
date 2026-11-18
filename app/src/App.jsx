@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import * as THREE from 'three';
 import { PlanScene } from './plan/scene.js';
-import { H, ROOMS, SUB, CAT, ABBR, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
+import { H, ROOMS, SUB, CAT, ABBR, hasPower, roomLabel, roomByN, sortedByRoom, countByCat, listText } from './plan/geometry.js';
 import { computeRoutes, routeText, fm } from './plan/routes.js';
 import { createStore } from './store.js';
 
@@ -278,7 +278,7 @@ function Sheet({ it, moving, update, setH, onMove, onDup, onDel, onDone }) {
       <div className="f"><label>Text</label>
         <input type="text" placeholder="ex: frigider, TV, aplică pat…" maxLength={60} value={it.text || ''} onChange={e => update({ text: e.target.value }, 400)} />
       </div>
-      {s.cat === 'socket' && !s.data && (
+      {hasPower(s) && (
         <label className="chk"><input type="checkbox" checked={!!it.ded} onChange={e => update({ ded: e.target.checked })} />
           <span>Circuit separat – aparat peste 2 kW (cuptor, plită, mașină de spălat, boiler, AC)</span></label>
       )}

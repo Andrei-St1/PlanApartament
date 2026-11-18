@@ -1,5 +1,5 @@
 /* Calculul traseelor de cablu prin șapă (portat din planul original) */
-import { GC, GX, GY, NC, wallCell, doorCell, nearW, ROOMS, SUB, CX, CZ } from './geometry.js';
+import { GC, GX, GY, NC, wallCell, doorCell, nearW, ROOMS, SUB, CX, CZ, hasPower } from './geometry.js';
 
 export const SCREED = 0.05;
 const TURN = 0.3;
@@ -101,7 +101,7 @@ export function computeRoutes(items, RS) {
   };
   // grupare pe circuite
   const groups = [], cat = it => SUB[it.sub].cat;
-  const sock = devs.filter(i => cat(i) === 'socket' && !SUB[i.sub].data), data = devs.filter(i => SUB[i.sub].data), sw = devs.filter(i => cat(i) === 'switch');
+  const sock = devs.filter(i => hasPower(SUB[i.sub])), data = devs.filter(i => SUB[i.sub].data), sw = devs.filter(i => cat(i) === 'switch');
   const pd = it => D(panel, it);
   const cluster = (list, max, prefix, kind) => {
     const byRoom = new Map(); list.forEach(i => { const k = i.room ?? -1; if (!byRoom.has(k)) byRoom.set(k, []); byRoom.get(k).push(i); });

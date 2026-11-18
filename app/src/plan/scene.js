@@ -4,6 +4,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { H, CX, CZ, WALLS, ROOMS, SUB, CAT, ABBR, roomAt, isFree } from './geometry.js';
 
+/* ce are fiecare modul al unei prize: 'pow' (230 V), 'tv', 'net' sau 'data' (TV și/sau internet în același modul) */
+const modKind = (sub, i) => !sub.data ? 'pow' : sub.pow ? (i < sub.pow ? 'pow' : i === sub.pow ? 'tv' : 'net') : 'data';
+
 const W = (x, y) => new THREE.Vector3(x - CX, 0, y - CZ);   // plan -> lume
 export const EYE = 1.6;
 
@@ -200,13 +203,14 @@ export class PlanScene {
       for (let i = 0; i < sub.mods; i++) {
         const cx = -mw * (sub.mods - 1) / 2 + i * mw;
         if (cat === 'socket') {
-          if (sub.data) {
-            const both = sub.net && sub.tv;
-            if (sub.net) {
+          const mk = modKind(sub, i);
+          if (mk !== 'pow') {
+            const net = mk === 'net' || (mk === 'data' && sub.net), tv = mk === 'tv' || (mk === 'data' && sub.tv), both = net && tv;
+            if (net) {
               const q = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.018, 0.004), mat.hole); q.position.set(cx - (both ? 0.013 : 0), 0, 0.0155); body.add(q);
               const tab = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.004, 0.002), mat.mark); tab.position.set(cx - (both ? 0.013 : 0), 0.006, 0.0175); body.add(tab);
             }
-            if (sub.tv) {
+            if (tv) {
               const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.004, 16), mat.hole); c2.rotation.x = Math.PI / 2; c2.position.set(cx + (both ? 0.016 : 0), 0, 0.0155); body.add(c2);
               const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.003, 8), mat.mark); pin.rotation.x = Math.PI / 2; pin.position.set(cx + (both ? 0.016 : 0), 0, 0.0175); body.add(pin);
             }
