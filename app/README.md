@@ -3,7 +3,7 @@
 Aceeași funcționalitate ca `plan-3d-apartament.html` (plan 3D din releveu, prize / întrerupătoare / note / tablou pe pereți, mod de plimbare, listă, trasee de cablu prin șapă), dar **planul este comun**: oricine deschide pagina îl poate modifica, iar modificările se salvează pe server și apar imediat la toți cei care au pagina deschisă.
 
 - **Frontend:** React 18 + Three.js (Vite)
-- **Server:** Node.js + Express; planul se păstrează în `data/plan.json`, iar modificările ajung live prin Server-Sent Events
+- **Server:** Node.js + Express; planul se păstrează în `data/plan.json` (sau într-un Durable Object pe Cloudflare), iar modificările ajung live prin WebSocket
 - **Istoric:** serverul păstrează automat ultimele 100 de versiuni (la câteva minute de modificări și înainte de orice import / ștergere completă). Din ⋯ → „Istoric versiuni” se poate reveni la una mai veche, dacă cineva strică planul.
 
 ## Pornire locală
@@ -23,6 +23,16 @@ npm start          # http://localhost:3001
 Variabile de mediu: `PORT` (implicit 3001), `DATA_DIR` (implicit `./data`).
 
 ## Publicare pe internet
+
+### Cloudflare Workers (recomandat, gratuit)
+
+Configurația este în `wrangler.jsonc` (în rădăcina repo-ului). Paginile sunt servite ca fișiere statice, iar `/api/*` ajunge la un Durable Object (`worker/index.js`) care păstrează planul și istoricul în SQLite și trimite modificările live prin WebSocket. Serverul Node nu este folosit acolo.
+
+- **Din GitHub (Workers Builds):** în dashboard, Worker-ul legat de repo trebuie să aibă același nume ca `"name"` din `wrangler.jsonc`; directorul rădăcină rămâne `/`, comanda de deploy `npx wrangler deploy`. La fiecare push pe ramura de producție se face build (`npm run build` în `app/`) și deploy automat.
+- **Din calculator:** `npx wrangler login`, apoi `npm run cf:deploy`.
+- **Test local al variantei Cloudflare:** `npm run cf:dev` (http://localhost:8787).
+
+### Server Node propriu
 
 Serverul trebuie să ruleze continuu și să aibă **un disc care se păstrează** (altfel planul se pierde la repornire):
 
