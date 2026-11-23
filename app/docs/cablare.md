@@ -228,7 +228,7 @@ Factorul P este 0,2 pentru 1–3 circuite de 20 A și 0,4 pentru 4–6 circuite.
 
 **Presupuneri:**
 
-- coloana contor–tablou: 15 m × 10 mm² la 25 A, adică ~0,7%;
+- coloana contor–tablou: 3 m × 10 mm² la 25 A (contorul e lângă tablou), adică ~0,15%;
 - prize: 2 kW pe circuit;
 - bucătărie: 3,5 kW pe circuit;
 - iluminat: 100 W pe punct de lumină, minimum 300 W.
@@ -310,11 +310,11 @@ Răspunsuri primite (23.11.2026):
 - **Fără aer condiționat.**
 - **Apa caldă vine de la centrala pe gaz:** nu e boiler. Centrala primește circuit separat (recomandat de producători).
 - **În living nu doarme nimeni**, doar ocazional musafirii: AFDD nu e obligatoriu acolo, rămâne opțional.
+- **Centrala e în bucătărie**, pe peretele din fața tabloului. Lângă ea vine priza pe circuit separat; detectorul de gaz se pune tot în bucătărie.
+- **Contorul e aproape de tablou:** coloana e scurtă, presupusă 3 m × 10 mm² (secțiunea rămâne de verificat).
+- **Baia mare are cadă**, la capătul opus ușii, pe toată lățimea băii (170 × 70 cm). Aplicația desenează cada și avertizează dacă o priză sau un întrerupător e la mai puțin de 60 cm de ea. **Baia de serviciu nu are cadă.**
+- **Șapa e turnată direct pe placă (aderentă):** tuburile stau în cei 5 cm de șapă, fără strat de egalizare.
 
 Întrebări rămase:
-1. Unde e centrala (bucătărie, baie, hol)?
-2. **Punctul media:** se pune lângă tablou, în Hol, sau în altă parte (de exemplu lângă intrarea cablului de la operator)?
-3. **Coloana:** cât de lungă e coloana de la contor la tablou și ce secțiune are? Am presupus 15 m × 10 mm².
-4. **Băile:** unde sunt cada și dușul? Prizele trebuie să stea la cel puțin 60 cm de ele.
-5. **Corpurile de iluminat:** nu sunt desenate. Am presupus o lumină în mijlocul camerei pentru fiecare clapă; aplicele și spoturile schimbă cantitățile.
-6. **Șapa:** e aderentă sau flotantă (pe izolație)? La cea flotantă, tuburile se pun într-un strat de egalizare, nu în cei 5 cm.
+1. **Punctul media:** se pune lângă tablou, în Hol, sau în altă parte (de exemplu lângă intrarea cablului de la operator)?
+2. **Corpurile de iluminat:** nu sunt desenate. Am presupus o lumină în mijlocul camerei pentru fiecare clapă; aplicele și spoturile schimbă cantitățile.

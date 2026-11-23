@@ -1,6 +1,6 @@
 /* Proiect preliminar al instalației electrice: circuite, trasee prin șapă, tuburi, tablou și materiale.
    Regulile, cu articolele și sursele lor, sunt în docs/cablare.md (secțiunea „Cum se reflectă în cod”). */
-import { GC, GX, GY, NC, H, CX, CZ, wallCell, doorCell, nearW, ROOMS, SUB, WALLS, roomAt, hasPower, switchLinks, partnersOf, chainOf } from './geometry.js';
+import { GC, GX, GY, NC, H, CX, CZ, wallCell, doorCell, nearW, ROOMS, SUB, WALLS, TUB, roomAt, hasPower, switchLinks, partnersOf, chainOf } from './geometry.js';
 
 export const SCREED = 0.05;                   // șapa de 5 cm
 const SCREED_MM = 50, COVER_MIN = 25;         // acoperire minimă recomandată peste tub, în șapă (mm)
@@ -8,7 +8,7 @@ export const SLEEP = [7, 6];                  // camere de dormit: AFDD obligato
 const GUEST = [9];                             // livingul: se doarme doar ocazional (musafiri) – AFDD opțional
 const WET = [4, 8], KITCH = [2, 1];           // băi; bucătărie + cămară
 const UN = 230, RHO = 0.0206;                 // V; rezistivitatea cuprului la 70 °C (Ω·mm²/m)
-export const COL = { L: 15, S: 10, I: 25 };   // coloana contor → tablou: m, mm², A (presupunere, de verificat la fața locului)
+export const COL = { L: 3, S: 10, I: 25 };    // coloana contor → tablou: m, mm², A (contorul e aproape de tablou; secțiunea e presupusă)
 const DU_MAX = { light: 3, power: 5 };        // I7 5.2.5.1 – cădere de tensiune admisă (%), de la contor
 const IZ = { 1.5: 17.5, 2.5: 24, 4: 32, 6: 41, 10: 57 };    // curent admisibil, mod B1 (conductoare în tub), PVC, 30 °C – I7 anexa 5.10
 const IZ_C = { 1.5: 16.5, 2.5: 23, 4: 30, 6: 38, 10: 52 };  // idem, mod B2 (cablu multiconductor în tub)
@@ -396,17 +396,21 @@ export function computeRoutes(items, RS) {
   }
   devs.filter(i => hasPower(SUB[i.sub]) && i.h < 0.1 && !WET.includes(i.room) && !KITCH.includes(i.room))
     .forEach(i => W('warn', `#${i.n}: priza e la ${Math.round(i.h * 100)} cm – I7 5.4.25 cere axul prizei peste 10 cm de pardoseala finită`));
+  /* volumele 0–2 din baia mare: cada plus 60 cm în jur (I7 7.1.2, 7.1.4.3) */
+  const tubDist = it => { const x = it.x + CX, y = it.z + CZ, [x0, x1, y0, y1] = TUB.r; return Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(y0 - y, 0, y - y1)); };
+  const nearTub = devs.filter(i => i.room === TUB.room && (hasPower(SUB[i.sub]) || SUB[i.sub].cat === 'switch') && tubDist(i) < 0.6);
+  if (nearTub.length) W('warn', `${nearTub.map(i => `#${i.n} (${Math.round(tubDist(i) * 100)} cm)`).join(', ')}: prea aproape de cadă – în volumele 0–2 (cada și 60 cm în jurul ei) nu se pun prize sau întrerupătoare (I7 7.1.4.3); mută-le la peste 60 cm`);
   const bathSock = sock.filter(i => WET.includes(i.room));
-  if (bathSock.length) W('info', `Prizele din baie (${bathSock.map(i => '#' + i.n).join(', ')}) trebuie să fie la cel puțin 60 cm de marginea căzii / dușului, în afara volumului 2 (I7 7.1.4.3), cu diferențial 30 mA`);
+  if (bathSock.length) W('info', `Prizele din băi (${bathSock.map(i => '#' + i.n).join(', ')}) sunt pe diferențial 30 mA. În baia mare distanța față de cadă e verificată automat; în baia de serviciu nu e cadă – dacă pui duș, ține prizele la 60 cm de el`);
   groups.filter(g => g.kind === 'ded' && g.fixed).forEach(g => W('info', `${g.appl.name} (#${g.items[0].n}, ${fm(g.appl.kw)} kW): racord fix într-o doză cu cleme, nu prin priză Schuko de 16 A`));
   groups.filter(g => g.kind === 'ded' && !g.appl.known).forEach(g => W('info', `#${g.items[0].n}: nu știu ce aparat e – am presupus ${fm(DED_KW)} kW; scrie în „Text” aparatul sau puterea (ex. „cuptor 3,5 kW”)`));
   if (sock.some(i => KITCH.includes(i.room)) && !sock.some(i => i.ded && KITCH.includes(i.room)))
     W('info', 'În bucătărie nu e marcat niciun aparat peste 2 kW (cuptor electric, mașină de vase): bifează „Circuit separat” la prizele lor (I7 5.4.7). Plita e pe gaz, deci nu are nevoie de circuit propriu');
   /* apartamentul are plită și centrală pe gaz */
   if (devs.length && !sock.some(i => i.ded && /central/i.test(applOf(i).name)))
-    W('info', 'Centrala pe gaz: pune lângă ea o priză cu „Circuit separat” și aparatul „Centrală termică”, ca o defecțiune pe prize să n-o oprească (recomandat de producători)');
+    W('info', 'Centrala pe gaz e în bucătărie, pe peretele din fața tabloului: pune lângă ea o priză cu „Circuit separat” și aparatul „Centrală termică”, ca o defecțiune pe prize să n-o oprească (recomandat de producători)');
   if (devs.length && !devs.some(i => /detector/i.test(i.text || '')))
-    W('info', 'Detector de gaz: pune o priză lângă locul lui, în bucătărie, la circa 30 cm sub tavan (gazul natural urcă), și scrie „detector” în Text; electrovalva se montează pe conducta de gaz – verifică cerințele cu firma de gaze');
+    W('info', 'Detector de gaz: pune o priză lângă locul lui, în bucătărie (între aragaz și centrală), la circa 30 cm sub tavan (gazul natural urcă), și scrie „detector” în Text; electrovalva se montează pe conducta de gaz – verifică cerințele cu firma de gaze');
   if (devs.some(i => GUEST.includes(i.room)))
     W('info', 'Livingul nu e cameră de dormit, așa că AFDD nu e obligatoriu acolo; dacă vei avea des musafiri la dormit, poți pune AFDD și pe circuitele lui (I7 4.2.2.10)');
 

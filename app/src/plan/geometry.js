@@ -46,6 +46,8 @@ export const ROOMS = [
   { n: 6, name: 'Cameră copii', a: 10.3, c: '#e9dcc3', r: [[3.89, 6.76, 7.52, 11.10]] },
   { n: 10, name: 'Balcon', a: 4.1, c: '#d9d9d6', r: [[0.24, 3.94, -1.40, 0]] },
 ];
+/* Cada din baia mare: la capătul opus ușii, pe toată lățimea (170 × 70 cm) */
+export const TUB = { room: 8, r: [0.30, 1.00, 5.62, 7.37], h: 0.55 };
 export const roomLabel = r => `${r.n} · ${r.name}`;
 export const roomByN = n => ROOMS.find(r => r.n === n);
 

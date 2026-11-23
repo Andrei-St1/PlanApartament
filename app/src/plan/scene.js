@@ -2,7 +2,7 @@
    Scena desenează apartamentul și elementele; deciziile (ce se întâmplă la o atingere) le ia aplicația. */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { H, CX, CZ, WALLS, ROOMS, SUB, CAT, ABBR, roomAt, isFree, partnersOf } from './geometry.js';
+import { H, CX, CZ, WALLS, ROOMS, TUB, SUB, CAT, ABBR, roomAt, isFree, partnersOf } from './geometry.js';
 
 /* ce are fiecare modul al unei prize: 'pow' (230 V), 'tv', 'net' sau 'data' (TV și/sau internet în același modul) */
 const modKind = (sub, i) => !sub.data ? 'pow' : sub.pow ? (i < sub.pow ? 'pow' : i === sub.pow ? 'tv' : 'net') : 'data';
@@ -121,6 +121,9 @@ export class PlanScene {
     const rm = new THREE.MeshLambertMaterial({ color: '#8d8a84', transparent: true, opacity: 0.75 });
     const rail = (x0, x1, y0, y1) => { const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 1.0, y1 - y0), rm); const c = W((x0 + x1) / 2, (y0 + y1) / 2); m.position.set(c.x, 0.5, c.z); scene.add(m); };
     rail(0.24, 3.94, -1.40, -1.34); rail(0.24, 0.30, -1.34, 0); rail(3.88, 3.94, -1.34, 0);
+    // cada din baia mare
+    { const [x0, x1, y0, y1] = TUB.r, m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, TUB.h, y1 - y0), new THREE.MeshLambertMaterial({ color: '#f4f6f7' }));
+      const c = W((x0 + x1) / 2, (y0 + y1) / 2); m.position.set(c.x, TUB.h / 2, c.z); m.raycast = () => { }; scene.add(m); }
     // pardoseli + etichete camere
     for (const r of ROOMS) {
       for (const [x0, x1, y0, y1] of r.r) {
