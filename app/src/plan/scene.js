@@ -403,6 +403,14 @@ export class PlanScene {
         riser(e.b, e.b.h - 0.07);
       }
     });
+    // cutia media (curenți slabi), lângă tablou
+    const m = res.media;
+    if (m && m.x !== res.panel.x) {
+      this.mediaGeo = this.mediaGeo || new THREE.BoxGeometry(0.3, 0.42, 0.04);
+      const box = new THREE.Mesh(this.mediaGeo, new THREE.MeshBasicMaterial({ color: '#4a4f57' }));
+      box.position.set(m.x + m.nx * 0.025, m.h, m.z + m.nz * 0.025); box.rotation.y = Math.atan2(m.nx, m.nz); box.raycast = () => { };
+      grp.add(box);
+    }
   }
 
   screenshot() { this.renderer.render(this.scene, this.camera); return this.renderer.domElement.toDataURL('image/png'); }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import * as THREE from 'three';
 import { PlanScene } from './plan/scene.js';
 import { H, ROOMS, SUB, CAT, ABBR, hasPower, isLinkable, maxLinks, partnersOf, chainOf, roomLabel, roomByN, sortedByRoom, countByCat, listText, roomSummary, summaryText, summaryCsv, SUM_COLS } from './plan/geometry.js';
-import { computeRoutes, routeText, fm } from './plan/routes.js';
+import { computeRoutes, routeText, bomCsv, fm, APPL, COL, SLEEP } from './plan/routes.js';
 import { createStore } from './store.js';
 
 const store = createStore();
@@ -11,14 +11,23 @@ const ls = {
   get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* fără stocare locală */ } },
 };
+function download(text, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
 const SOURCES = [
-  ['https://economisi.ro/energie/solutii-casa/schema-tablou-electric-monofazat', 'Schema tablou electric – cerințele I7-2011 (economisi.ro)'],
-  ['https://newsweek.ro/tehnologie/ce-tip-de-cablu-e-cel-mai-potrivit-pentru-instalatia-electrica-de-acasa', 'Ce cablu pentru instalația de acasă – I7 despre tuburi (Newsweek România)'],
-  ['https://primariabuzau.ro/wp-content/uploads/2020/09/Memoriu-instalatii-electrice-1.pdf', 'Memoriu tehnic instalații electrice conform I7/2011 (Primăria Buzău)'],
-  ['https://lunca-muresului.ro/download/itymDw2FXhQFTroxvmlplVT2eg9mPegs8tLVtMQv.pdf', 'Caiet de sarcini – tablouri în holul de intrare (lunca-muresului.ro)'],
+  ['https://legislatie.just.ro/Public/DetaliiDocument/287132', 'Normativ I7/2011 – textul oficial (Portal legislativ)'],
+  ['https://curentulelectric.ro/wp-content/uploads/2023/11/Actualizari-2023-la-normativ-I7-2011.pdf', 'Modificările I7 din 2023 – AFDD, DDR 30 mA (Monitorul Oficial 512/2023)'],
+  ['https://www.arya.ro/legislatie/pdf.php?slug=normativ-i7-2011', 'I7/2011 în PDF: tabelul 5.7 (tuburi), anexa 5.32 (secțiuni minime), cap. 7.1 (băi)'],
+  ['https://excel-networking.com/excel_web_files/uploads/Technical%20Notes/TN01_Power_Segregation_Distances.pdf', 'Distanțe între date și forță după EN 50174-2 (Excel Networking)'],
+  ['https://www.ancom.ro/uploads/standarde/pdf/Rezumat%20SR%20EN%2050174-2_2019_Tehnologia%20informa%C8%9Biei.Instalarea%20cablurilor.Proiectare%20%C8%99i%20prectici%20de%20instalare%20%C3%AEn%20interiorul%20cl%C4%83dirilor.pdf', 'SR EN 50174-2:2019 – rezumat (ANCOM)'],
+  ['https://cdn.dedeman.ro/media/catalog/product/fise-tehnice/Fisa_tehnica_-_tub_flexibil_Legrand_rezistenta_marita.pdf', 'Tub flexibil 750 N – diametre interioare (fișă Legrand)'],
+  ['https://cdn.mathaus.ro/medias/sys_master/productPdfs/h02/hf1/h00/9467631894558.pdf', 'Cablu CYY-F – diametre exterioare (fișă tehnică)'],
+  ['https://www.baunetzwissen.de/elektro/fachwissen/leitungen-verteiler/leitungsverlegung-und-installationszonen-153012', 'Zone de instalare pe pereți, DIN 18015-3 (Baunetz Wissen)'],
   ['https://www.elektro-wandelt.de/ratgeber/Elektro-Installationszonen-im-Fussboden/', 'Zone de instalare în pardoseală, DIN 18015-3 (elektro-wandelt.de)'],
-  ['https://www.sanier.de/elektroinstallation/elektroinstallation-auf-dem-rohfussboden', 'Cabluri pe placă și în șapă, în tuburi (sanier.de)'],
-  ['https://re-energy.ro/calculator-sectiune-cablu/', 'Secțiune cablu și gruparea circuitelor în tub (re-energy.ro)'],
+  ['https://www.legrand.fr/questions-frequentes/combien-de-prises-de-courant-par-disjoncteur', 'Câte prize pe un circuit – NF C 15-100 (Legrand)'],
 ];
 
 export default function App() {
@@ -42,7 +51,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [hint, setHint] = useState({ t: 'Alege o cameră din meniul de sus ca să intri și să pui prize', on: true });
   const [showLabels, setShowLabels] = useState(() => ls.get('plan-labels', true));
-  const [RS, setRS] = useState(() => ({ mode: 'par', max: 8, ...ls.get('plan-rs', {}), on: false }));
+  const [RS, setRS] = useState(() => ({ mode: 'par', max: 8, cab: 'fy', ...ls.get('plan-rs', {}), on: false }));
   const [routeRes, setRouteRes] = useState(null);
   const [visitor, setVisitor] = useState(() => ls.get('plan-visitor', false));
 
@@ -112,7 +121,7 @@ export default function App() {
     const t = setTimeout(() => { const r = computeRoutes(items, RS); setRouteRes(r); sceneRef.current?.drawRoutes(r); }, 250);
     return () => clearTimeout(t);
   }, [items, RS]);
-  const updRS = patch => setRS(r => { const n = { ...r, ...patch }; ls.set('plan-rs', { mode: n.mode, max: n.max }); return n; });
+  const updRS = patch => setRS(r => { const n = { ...r, ...patch }; ls.set('plan-rs', { mode: n.mode, max: n.max, cab: n.cab }); return n; });
   function toggleRoutes() {
     const on = !RS.on; updRS({ on });
     if (on) {
@@ -224,7 +233,7 @@ export default function App() {
           <div id="rcard">
             {routeRes.err ? <span>{routeRes.err}</span> : <>
               <span className="sw">{routeRes.groups.map((g, i) => <i key={i} style={{ background: g.color }}></i>)}</span>
-              <span>{routeRes.groups.length} circuite · ~{Math.round(Object.values(routeRes.tot).reduce((a, b) => a + b, 0))} m cablu</span>
+              <span>{routeRes.circ.length} circuite · ~{Math.round(Object.values(routeRes.tot).reduce((a, b) => a + b, 0))} m cablu{routeRes.warn.some(w => w.lvl !== 'info') ? <b className="wn"> · ⚠ {routeRes.warn.filter(w => w.lvl !== 'info').length}</b> : null}</span>
               <button className="btn" style={{ padding: '4px 9px' }} onClick={() => setModal({ kind: 'routes' })}>Detalii</button>
             </>}
           </div>
@@ -343,11 +352,34 @@ function Sheet({ it, items, pm, link, unlink, moving, update, setH, onMove, onDu
         <label className="chk"><input type="checkbox" checked={!!it.ded} onChange={e => update({ ded: e.target.checked })} />
           <span>Circuit separat – aparat peste 2 kW (cuptor, plită, mașină de spălat, boiler, AC)</span></label>
       )}
+      {hasPower(s) && it.ded && <Appliance it={it} update={update} />}
       <div className="acts">
         <button className={'btn' + (moving ? ' on' : '')} onClick={onMove}>↔ Mută</button>
         {s.cat !== 'panel' && <button className="btn" onClick={onDup}>⧉ Copiază</button>}
         <button className="btn dang" onClick={onDel}>Șterge</button>
         <button className="btn on" onClick={onDone}>Gata</button>
+      </div>
+    </div>
+  );
+}
+
+/* aparatul de pe un circuit separat: tipul și puterea (pentru siguranță, secțiune și căderea de tensiune) */
+function Appliance({ it, update }) {
+  const kw = typeof it.kw === 'number' ? it.kw : null;
+  const [v, setV] = useState(kw != null ? String(kw).replace('.', ',') : '');
+  useEffect(() => setV(kw != null ? String(kw).replace('.', ',') : ''), [kw, it.id]);
+  const save = () => { const n = parseFloat(String(v).replace(',', '.')); if (isFinite(n) && n >= 0.1 && n <= 30) update({ kw: Math.round(n * 10) / 10 }); else if (!v) update({ kw: undefined }); };
+  return (
+    <div className="f"><label>Aparat</label>
+      <div>
+        <div className="presets" style={{ marginTop: 0 }}>
+          {APPL.map(a => <button key={a.name} className={'chip' + (kw === a.kw && a.re.test(it.text || '') ? ' on' : '')}
+            onClick={() => update({ kw: a.kw, text: (it.text || '').trim() ? it.text : a.name })}>{a.name} {fm(a.kw)} kW</button>)}
+        </div>
+        <div className="hgt" style={{ marginTop: 6 }}>
+          <input type="text" inputMode="decimal" placeholder="?" value={v} onChange={e => setV(e.target.value)} onBlur={save} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
+          <span className="lbl">kW (din eticheta aparatului)</span>
+        </div>
       </div>
     </div>
   );
@@ -368,12 +400,7 @@ function Modal({ modal, setModal, items, plan, copy, showToast, showLabels, setS
           <td>{it.n}</td><td><span className="tag" style={{ background: CAT[SUB[it.sub].cat].c }}></span>{SUB[it.sub].name}</td><td className="h">{Math.round(it.h * 100)} cm</td><td>{pm.get(it.id) ? '↔ ' + pm.get(it.id).map(p => '#' + p.n).join(', ') + (it.text ? ' · ' : '') : ''}{it.text}</td></tr>);
       }
       const sum = roomSummary(items);
-      const csv = () => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([summaryCsv(items)], { type: 'text/csv;charset=utf-8' }));
-        a.download = 'sumar-camere.csv'; document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      };
+      const csv = () => download(summaryCsv(items), 'sumar-camere.csv');
       body = <>
         <h4 className="sub">Sumar pe camere</h4>
         <div className="scrollx"><table className="sum"><tbody>
@@ -408,7 +435,7 @@ function Modal({ modal, setModal, items, plan, copy, showToast, showLabels, setS
     title = 'Copiază manual';
     body = <><p className="note">Selectează tot textul și copiază-l.</p><textarea readOnly value={modal.txt} onFocus={e => e.target.select()} autoFocus /></>;
   } else if (modal.kind === 'routes') {
-    title = 'Trasee cabluri prin șapă';
+    title = 'Trasee cabluri și tablou';
     body = <Routes {...{ RS, updRS, routeRes, copy }} />;
   }
   return (
@@ -479,37 +506,82 @@ function History({ close, showToast }) {
 
 function Routes({ RS, updRS, routeRes, copy }) {
   const r = routeRes;
+  const [tab, setTab] = useState('circ');
   if (!r || r.err) return <p className="note">{r ? r.err : 'Se calculează…'}</p>;
+  const bad = r.warn.filter(w => w.lvl !== 'info'), info = r.warn.filter(w => w.lvl === 'info');
+  const tubes = g => [...new Set(g.edges.map(L => L.tube))].sort((a, b) => a - b).map(d => 'Ø' + d).join('/');
+  let lastCat;
   return <>
     <div className="set"><span className="lbl">Traseu în șapă:</span>
       <button className={'chip hm' + (RS.mode === 'par' ? ' on' : '')} onClick={() => updRS({ mode: 'par' })}>paralel cu pereții (recomandat)</button>
       <button className={'chip hm' + (RS.mode === 'dia' ? ' on' : '')} onClick={() => updRS({ mode: 'dia' })}>cel mai scurt (diagonal)</button></div>
+    <div className="set"><span className="lbl">Conductoare:</span>
+      <button className={'chip hm' + (RS.cab !== 'cyy' ? ' on' : '')} onClick={() => updRS({ cab: 'fy' })}>FY în tub (recomandat)</button>
+      <button className={'chip hm' + (RS.cab === 'cyy' ? ' on' : '')} onClick={() => updRS({ cab: 'cyy' })}>cablu CYY-F în tub</button></div>
     <div className="set"><span className="lbl">Max. prize pe circuit:</span>
       {[6, 8, 10].map(v => <button key={v} className={'chip hm' + (RS.max === v ? ' on' : '')} onClick={() => updRS({ max: v })}>{v}</button>)}</div>
-    <table><tbody>
-      <tr><th></th><th>Circuit</th><th>Cablu</th><th>Lungime</th></tr>
-      {r.groups.map((g, i) => <tr key={i}>
-        <td><span className="tag" style={{ background: g.color }}></span>C{i + 1}</td>
-        <td><b>{g.name}</b><br /><span className="lbl">{g.prot} · {g.kind === 'trav' ? `#${g.seq[0].n} ↔ #${g.seq[1].n}` : 'tablou → ' + g.seq.map(x => '#' + x.n).join(' → ')}{g.cross ? <> · <b>{g.cross} străpungere{g.cross > 1 ? 'i' : ''} de perete</b></> : null}</span></td>
-        <td>{g.type}</td><td className="h">{fm(g.cable)} m</td></tr>)}
-    </tbody></table>
-    <h4>Total materiale (cu ~30 cm rezervă în fiecare doză)</h4>
-    <table><tbody>
-      {Object.entries(r.tot).map(([k, v]) => <tr key={k}><td>{k}</td><td className="h">~{Math.round(v)} m</td></tr>)}
-      <tr><td>Tub flexibil de protecție în șapă și pereți</td><td className="h">~{Math.round(r.tube)} m</td></tr>
-    </tbody></table>
-    <p className="note">Cumpără cu 10–15% în plus. Lungimile includ coborârea din doză până în șapă (înălțimea + ~5 cm), traseul prin șapă și urcarea în perete până la fiecare doză. Cablurile de la întrerupătoare până la becuri nu sunt incluse.</p>
-    <div className="acts"><button className="btn" onClick={() => copy(routeText(r, RS))}>Copiază ca text pentru electrician</button></div>
+
+    {bad.length > 0 && <div className="warnbox">{bad.map((w, i) => <div key={i}>⚠ {w.t}</div>)}</div>}
+    {info.length > 0 && <details className="infobox"><summary>De verificat la execuție ({info.length})</summary>{info.map((w, i) => <div key={i}>· {w.t}</div>)}</details>}
+
+    <div className="set tabs">
+      {[['circ', `Circuite (${r.circ.length})`], ['tab', 'Tablou'], ['mat', 'Materiale']].map(([k, t]) =>
+        <button key={k} className={'chip hm' + (tab === k ? ' on' : '')} onClick={() => setTab(k)}>{t}</button>)}
+    </div>
+
+    {tab === 'circ' && <>
+      <div className="scrollx"><table className="rt"><tbody>
+        <tr><th></th><th>Circuit</th><th>Cablu</th><th>Lungime</th></tr>
+        {r.groups.map((g, i) => <tr key={i}>
+          <td><span className="tag" style={{ background: g.color }}></span>{g.id || ''}</td>
+          <td><b>{g.name}</b><br /><span className="lbl wrap">{g.prot}
+            {g.kind === 'data'
+              ? <> · {g.edges.map(L => `#${L.b.n} ${L.net && L.tv ? 'net+TV' : L.net ? 'net' : 'TV'} Ø${L.tube}`).join(', ')}</>
+              : <> · {g.kind === 'trav' ? `#${g.seq[0].n} ↔ #${g.seq[1].n}` : 'tablou → ' + g.seq.map(x => '#' + x.n).join(' → ')} · tub {tubes(g)}</>}
+            {g.cross ? <> · <b>{g.cross} străpungere{g.cross > 1 ? 'i' : ''} de perete</b></> : null}
+            {g.dU != null && <> · ΔU {fm(g.dU)}%{g.points ? ` · ${g.points} lumini` : ''}</>}</span></td>
+          <td>{g.type}</td><td className="h">{fm(g.cable + (g.legLen || 0))} m</td></tr>)}
+      </tbody></table></div>
+      <p className="note">ΔU = căderea de tensiune de la contor la cel mai îndepărtat aparat, cu toată sarcina la capăt (max 3% la iluminat, 5% la prize – I7 5.2.5.1). Lungimea include coborârile în perete, rezerva din doze și, la iluminat, estimarea până la plafon.</p>
+    </>}
+
+    {tab === 'tab' && <>
+      <div className="scrollx"><table className="rt"><tbody>
+        <tr><th>Poz.</th><th>Aparat</th><th>Mod.</th><th>Circuite</th></tr>
+        {r.board.rows.map((x, i) => <tr key={i} className={x.sub ? 'subrow' : ''}><td className="h">{x.pos}</td><td>{x.dev}</td><td>{x.mods}</td><td className="lbl wrap">{x.circ}</td></tr>)}
+      </tbody></table></div>
+      <p className="note">Ocupat: <b>{r.board.mods} module</b>; cu 20% rezervă îți trebuie {r.board.need} → cutie îngropată de <b>{r.board.encl} module</b>. Pe sub tablou intră {r.board.tubes} tuburi de forță (≈ {r.board.tubes * 3} cm lățime), iar cutia media de alături primește tuburile de internet și TV.
+        Circuitele din dormitoare ({SLEEP.map(n => roomByN(n)?.name).join(', ')}) au AFDD, cerut din 2023 pentru spațiile de dormit.</p>
+    </>}
+
+    {tab === 'mat' && <>
+      <div className="scrollx"><table className="rt"><tbody>
+        <tr><th>Material</th><th>Cantitate</th></tr>
+        {r.bom.flatMap((b, i) => {
+          const out = [];
+          if (b.cat !== lastCat) { out.push(<tr key={'c' + i} className="grp"><td colSpan={2}>{b.cat}</td></tr>); lastCat = b.cat; }
+          out.push(<tr key={i}><td>{b.item}{b.note ? <span className="lbl wrap"> · {b.note}</span> : null}</td><td className="h">{b.unit === 'm' ? Math.ceil(b.qty) : b.qty} {b.unit}</td></tr>);
+          return out;
+        })}
+      </tbody></table></div>
+      <p className="note">Cantitățile sunt fără marjă: cumpără cablu și tub cu 10–15% în plus. Tub total ~{Math.round(r.tube)} m ({Object.entries(r.tubeM).map(([d, m]) => `Ø${d}: ${Math.round(m)} m`).join(', ')}).</p>
+    </>}
+
+    <div className="acts">
+      <button className="btn" onClick={() => copy(routeText(r, RS))}>Copiază ca text</button>
+      <button className="btn" onClick={() => download(bomCsv(r), 'materiale-instalatie.csv')}>Descarcă (Excel)</button>
+    </div>
+
     <h4>Cum am calculat</h4>
     <ul className="rules">
-      <li>Fiecare circuit pleacă din tablou, coboară în șapă și leagă dozele în buclă (din doză în doză), în ordinea care dă cel mai scurt cablu.</li>
-      <li>Iluminatul e separat de prize, iar orice aparat de peste 2 kW are circuit propriu (bifează „Circuit separat” la priza respectivă). Prizele din baie și din bucătărie au circuite separate de restul.</li>
-      <li>Prizele au cablu de minimum 2,5 mm² cu siguranță de 16 A și diferențial de 30 mA. Iluminatul are minimum 1,5 mm² și 10 A. La plită sau cuptor mare, secțiunea (4–6 mm²) o stabilește electricianul după putere.</li>
-      <li>În șapă, cablurile merg numai în tub de protecție, cu toate firele unui circuit (inclusiv împământarea) în același tub. În modul recomandat, traseele merg paralel cu pereții, la aproximativ 20 cm de ei, și trec dintr-o cameră în alta prin dreptul ușilor. Străpungerea unui perete interior e permisă doar când ocolul ar fi mult mai lung. Pereții exteriori și ghenele nu se străpung.</li>
-      <li>Prizele de internet primesc fiecare cablu UTP propriu, iar cele de TV cablu coaxial propriu, direct de la tablou (sau de la un rack media pus lângă el), separat de cablurile de 230 V. Priza TV/internet primește ambele cabluri.</li>
-      <li>Mai multe circuite în același tub se încălzesc mai tare, deci e de preferat câte un tub pe circuit.</li>
+      <li>Fiecare circuit pleacă din tablou, coboară în șapă și leagă dozele din doză în doză, în ordinea cu cel mai scurt cablu. Pe orizontală tuburile merg doar prin șapă, la cel puțin 20 cm de pereți și prin dreptul ușilor; în pereți doar vertical, drept sub aparat.</li>
+      <li>Iluminatul e separat de prize (I7 5.4.1). Prizele din bucătărie (max 6 pe circuit), din băi și din dormitoare au circuite proprii, iar orice aparat de peste 2 kW are circuit separat (I7 5.4.7) – bifează „Circuit separat” și alege aparatul.</li>
+      <li>Secțiuni minime: 1,5 mm² la iluminat, 2,5 mm² la prize (I7 anexa 5.32). Siguranța nu depășește curentul admisibil al conductorului; la plită ies 4–6 mm² și C32. Toate circuitele au diferențial de 30 mA (prize: I7 4.1.5.2.1; băi: I7 7.1.3.5), câte cel mult 6 pe un diferențial.</li>
+      <li>Fiecare circuit are tubul lui (I7 5.2.12.1.5), ales ca secțiunea interioară să fie de cel puțin 3 ori cea a conductoarelor (I7 tabelul 5.7). Peste 15 m sau 3 curbe între doze cerem mai mult loc în tub. Tubul nu trece de Ø25, ca să rămână 25 mm de șapă deasupra.</li>
+      <li>Internetul și TV-ul pleacă în stea dintr-o cutie media pusă lângă tablou, fiecare priză cu cablul ei, în tub separat (I7 5.2.8.1), ferit de tuburile de forță și încrucișat cu ele în unghi drept (EN 50174-2).</li>
+      <li>Presupuneri: coloana contor–tablou de {COL.L} m × {COL.S} mm² consumă {fm(r.colDU)}% din căderea de tensiune; un circuit de prize are 2 kW, cel de bucătărie 3,5 kW, un punct de lumină 100 W. Corpurile de iluminat nu sunt desenate: am pus câte o lumină în mijlocul camerei pentru fiecare clapă.</li>
     </ul>
-    <p className="note">Este un calcul orientativ pentru planificare și deviz. Proiectul și execuția trebuie făcute de un electrician autorizat ANRE, conform normativului I7/2011.</p>
+    <p className="note">Este un proiect preliminar, pentru planificare și deviz. Proiectul tehnic și execuția le face un electrician autorizat ANRE, conform normativului I7/2011.</p>
     <h4>Surse</h4>
     <div className="src">{SOURCES.map(([u, t]) => <div key={u}><a href={u} target="_blank" rel="noreferrer">{t}</a></div>)}</div>
   </>;

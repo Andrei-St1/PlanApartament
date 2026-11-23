@@ -17,6 +17,7 @@ export function cleanItem(it) {
   const out = { id: it.id, n: Number.isInteger(it.n) && it.n > 0 && it.n < 100000 ? it.n : 0, sub: it.sub, x: it.x, z: it.z, nx: it.nx, nz: it.nz, h: it.h,
     text: typeof it.text === 'string' ? it.text.slice(0, 60) : '', room: Number.isInteger(it.room) ? it.room : null };
   if (it.ded === true) out.ded = true;
+  if (num(it.kw, 0.1, 30)) out.kw = Math.round(it.kw * 10) / 10;   // puterea aparatului de pe circuitul separat (kW)
   if (typeof it.pair === 'string' && it.pair !== it.id && /^[A-Za-z0-9_-]{1,40}$/.test(it.pair)) out.pair = it.pair;
   return out;
 }
