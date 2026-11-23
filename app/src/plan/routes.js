@@ -5,6 +5,7 @@ import { GC, GX, GY, NC, H, CX, CZ, wallCell, doorCell, nearW, ROOMS, SUB, WALLS
 export const SCREED = 0.05;                   // șapa de 5 cm
 const SCREED_MM = 50, COVER_MIN = 25;         // acoperire minimă recomandată peste tub, în șapă (mm)
 export const SLEEP = [7, 6];                  // camere de dormit: AFDD obligatoriu (I7 4.2.2.10, modificarea din 2023)
+const GUEST = [9];                             // livingul: se doarme doar ocazional (musafiri) – AFDD opțional
 const WET = [4, 8], KITCH = [2, 1];           // băi; bucătărie + cămară
 const UN = 230, RHO = 0.0206;                 // V; rezistivitatea cuprului la 70 °C (Ω·mm²/m)
 export const COL = { L: 15, S: 10, I: 25 };   // coloana contor → tablou: m, mm², A (presupunere, de verificat la fața locului)
@@ -25,6 +26,7 @@ const DIRS8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, 
 
 /* Aparate care cer circuit separat (I7 5.4.7: peste 2 kW). Puterea vine din câmpul kw, din text („3,5 kW”) sau din tipul recunoscut. */
 export const APPL = [
+  { re: /pe gaz|gaz/i, name: 'Aragaz pe gaz (aprindere)', kw: 0.1 },
   { re: /plit|induc|aragaz/i, name: 'Plită electrică', kw: 7.2 },
   { re: /cuptor/i, name: 'Cuptor', kw: 3.5 },
   { re: /vase/i, name: 'Mașină de spălat vase', kw: 2.2 },
@@ -33,6 +35,7 @@ export const APPL = [
   { re: /boiler/i, name: 'Boiler', kw: 2.0 },
   { re: /\bac\b|aer cond|clima/i, name: 'Aer condiționat', kw: 2.5 },
   { re: /central/i, name: 'Centrală termică', kw: 0.2 },
+  { re: /detector/i, name: 'Detector de gaz cu electrovalvă', kw: 0.05 },
 ];
 const DED_KW = 3.5, SOCKET_KW = 3.68;          // peste 16 A × 230 V aparatul se leagă fix, nu prin priză
 export function applOf(it) {
@@ -398,7 +401,14 @@ export function computeRoutes(items, RS) {
   groups.filter(g => g.kind === 'ded' && g.fixed).forEach(g => W('info', `${g.appl.name} (#${g.items[0].n}, ${fm(g.appl.kw)} kW): racord fix într-o doză cu cleme, nu prin priză Schuko de 16 A`));
   groups.filter(g => g.kind === 'ded' && !g.appl.known).forEach(g => W('info', `#${g.items[0].n}: nu știu ce aparat e – am presupus ${fm(DED_KW)} kW; scrie în „Text” aparatul sau puterea (ex. „cuptor 3,5 kW”)`));
   if (sock.some(i => KITCH.includes(i.room)) && !sock.some(i => i.ded && KITCH.includes(i.room)))
-    W('info', 'În bucătărie nu e marcat niciun aparat peste 2 kW (cuptor, plită, mașină de vase): bifează „Circuit separat” la prizele lor (I7 5.4.7)');
+    W('info', 'În bucătărie nu e marcat niciun aparat peste 2 kW (cuptor electric, mașină de vase): bifează „Circuit separat” la prizele lor (I7 5.4.7). Plita e pe gaz, deci nu are nevoie de circuit propriu');
+  /* apartamentul are plită și centrală pe gaz */
+  if (devs.length && !sock.some(i => i.ded && /central/i.test(applOf(i).name)))
+    W('info', 'Centrala pe gaz: pune lângă ea o priză cu „Circuit separat” și aparatul „Centrală termică”, ca o defecțiune pe prize să n-o oprească (recomandat de producători)');
+  if (devs.length && !devs.some(i => /detector/i.test(i.text || '')))
+    W('info', 'Detector de gaz: pune o priză lângă locul lui, în bucătărie, la circa 30 cm sub tavan (gazul natural urcă), și scrie „detector” în Text; electrovalva se montează pe conducta de gaz – verifică cerințele cu firma de gaze');
+  if (devs.some(i => GUEST.includes(i.room)))
+    W('info', 'Livingul nu e cameră de dormit, așa că AFDD nu e obligatoriu acolo; dacă vei avea des musafiri la dormit, poți pune AFDD și pe circuitele lui (I7 4.2.2.10)');
 
   /* ---------- tabloul ---------- */
   const circ = groups.filter(g => g.kind !== 'trav' && g.kind !== 'data');

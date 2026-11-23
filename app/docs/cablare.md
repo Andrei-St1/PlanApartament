@@ -305,12 +305,16 @@ Câmpul `kw` al elementului e validat pe server în `app/server/core.js` (`clean
 
 ## 13. Presupuneri și întrebări pentru proprietar
 
-1. **Plita:** e pe gaz sau electrică? Dacă e electrică, ce putere are și cât e puterea aprobată în avizul de racordare (ATR)? Pentru 7,2 kW monofazat trebuie C32 și un branșament corespunzător.
-2. **Aer condiționat:** câte unități, unde, ce putere?
-3. **Boiler:** există boiler, sau apa caldă vine de la centrală? Centrala termică are nevoie de priză sau circuit propriu?
-4. **Punctul media:** se pune lângă tablou, în Hol, sau în altă parte (de exemplu lângă intrarea cablului de la operator)?
-5. **Livingul:** se doarme acolo? Dacă da, și circuitele lui au nevoie de AFDD.
-6. **Coloana:** cât de lungă e coloana de la contor la tablou și ce secțiune are? Am presupus 15 m × 10 mm².
-7. **Băile:** unde sunt cada și dușul? Prizele trebuie să stea la cel puțin 60 cm de ele.
-8. **Corpurile de iluminat:** nu sunt desenate. Am presupus o lumină în mijlocul camerei pentru fiecare clapă; aplicele și spoturile schimbă cantitățile.
-9. **Șapa:** e aderentă sau flotantă (pe izolație)? La cea flotantă, tuburile se pun într-un strat de egalizare, nu în cei 5 cm.
+Răspunsuri primite (23.11.2026):
+- **Plita e pe gaz:** nu are circuit propriu; aprinderea electrică merge pe o priză obișnuită din bucătărie. Se recomandă un detector de gaz cu electrovalvă, cu priză lângă el, la circa 30 cm sub tavan.
+- **Fără aer condiționat.**
+- **Apa caldă vine de la centrala pe gaz:** nu e boiler. Centrala primește circuit separat (recomandat de producători).
+- **În living nu doarme nimeni**, doar ocazional musafirii: AFDD nu e obligatoriu acolo, rămâne opțional.
+
+Întrebări rămase:
+1. Unde e centrala (bucătărie, baie, hol)?
+2. **Punctul media:** se pune lângă tablou, în Hol, sau în altă parte (de exemplu lângă intrarea cablului de la operator)?
+3. **Coloana:** cât de lungă e coloana de la contor la tablou și ce secțiune are? Am presupus 15 m × 10 mm².
+4. **Băile:** unde sunt cada și dușul? Prizele trebuie să stea la cel puțin 60 cm de ele.
+5. **Corpurile de iluminat:** nu sunt desenate. Am presupus o lumină în mijlocul camerei pentru fiecare clapă; aplicele și spoturile schimbă cantitățile.
+6. **Șapa:** e aderentă sau flotantă (pe izolație)? La cea flotantă, tuburile se pun într-un strat de egalizare, nu în cei 5 cm.
