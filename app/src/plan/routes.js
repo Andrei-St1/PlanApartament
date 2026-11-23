@@ -297,7 +297,7 @@ export function computeRoutes(items, RS) {
     }
     g.seq = seq;
     g.edges = seq.map((x, i) => mkLink(i ? seq[i - 1] : panel, x));
-    g.legs = g.kind === 'light' ? seq.filter(x => legRock.has(x.id)).map(legOf) : [];
+    g.legs = [];   // luminile și legătura spre plafon nu se calculează (la cererea proprietarului); legOf rămâne pentru o eventuală reactivare
   });
 
   /* firele de comutare dintre comutatoarele cap-scară / cruce (2 fire + PE), parte din circuitul de iluminat */
@@ -314,7 +314,7 @@ export function computeRoutes(items, RS) {
   const power = groups.filter(g => g.kind !== 'trav');
   power.forEach(g => {
     let P, In, secMin = 2.5, lim = DU_MAX.power;
-    if (g.kind === 'light') { g.points = g.legs.reduce((s, l) => s + l.rock, 0); P = Math.max(300, 100 * g.points); In = 10; secMin = 1.5; lim = DU_MAX.light; }
+    if (g.kind === 'light') { g.points = 0; P = Math.max(300, 100 * g.seq.reduce((s, x) => s + (legRock.get(x.id) || 0), 0)); In = 10; secMin = 1.5; lim = DU_MAX.light; }
     else if (g.kind === 'kitchen') { P = 3500; In = 16; }
     else if (g.kind === 'ded') { P = g.appl.kw * 1000; g.fixed = g.appl.kw > SOCKET_KW; In = g.fixed ? MCBS.find(v => v >= P / UN) || 40 : 16; }
     else { P = 2000; In = 16; }   // I7 5.4.7: 2 kW instalați pe un circuit de prize într-o locuință
@@ -541,7 +541,7 @@ export function routeText(res, RS) {
   res.board.rows.forEach(r => { t += `  ${r.sub ? '  ' : ''}${r.pos}  ${r.dev}  [${r.mods} mod.]  → ${r.circ}\n`; });
   t += '\nMATERIALE (fără marjă – cumpără cu 10–15% în plus)\n';
   let last; res.bom.forEach(b => { if (b.cat !== last) { t += `  ${b.cat}\n`; last = b.cat; } t += `    ${b.item}: ${qty(b)} ${b.unit}${b.note ? ' (' + b.note + ')' : ''}\n`; });
-  t += `\nPresupuneri: coloană contor–tablou ${COL.L} m × ${COL.S} mm² (${fm(res.colDU)}% din căderea de tensiune), prize 2 kW pe circuit, bucătărie 3,5 kW, 100 W pe punct de lumină; corpurile de iluminat nu sunt desenate – legătura spre plafon e estimată.\nProiectul tehnic și execuția: electrician autorizat ANRE, conform I7/2011.`;
+  t += `\nPresupuneri: coloană contor–tablou ${COL.L} m × ${COL.S} mm² (${fm(res.colDU)}% din căderea de tensiune), prize 2 kW pe circuit, bucătărie 3,5 kW, 100 W pe clapă de întrerupător (doar pentru căderea de tensiune); luminile și legăturile spre plafon nu sunt incluse în trasee și materiale.\nProiectul tehnic și execuția: electrician autorizat ANRE, conform I7/2011.`;
   return t;
 }
 

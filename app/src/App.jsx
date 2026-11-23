@@ -542,7 +542,7 @@ function Routes({ RS, updRS, routeRes, copy }) {
             {g.dU != null && <> · ΔU {fm(g.dU)}%{g.points ? ` · ${g.points} lumini` : ''}</>}</span></td>
           <td>{g.type}</td><td className="h">{fm(g.cable + (g.legLen || 0))} m</td></tr>)}
       </tbody></table></div>
-      <p className="note">ΔU = căderea de tensiune de la contor la cel mai îndepărtat aparat, cu toată sarcina la capăt (max 3% la iluminat, 5% la prize – I7 5.2.5.1). Lungimea include coborârile în perete, rezerva din doze și, la iluminat, estimarea până la plafon.</p>
+      <p className="note">ΔU = căderea de tensiune de la contor la cel mai îndepărtat aparat, cu toată sarcina la capăt (max 3% la iluminat, 5% la prize – I7 5.2.5.1). Lungimea include coborârile în perete și rezerva din doze; luminile și legăturile spre plafon nu sunt calculate.</p>
     </>}
 
     {tab === 'tab' && <>

@@ -265,9 +265,8 @@ Dacă limita e depășită, aplicația mărește secțiunea și afișează o ave
 
 **Alte materiale:**
 
-- Tub copex 750 N pe diametre, separat pentru curenți slabi și pentru legătura estimată perete–plafon.
+- Tub copex 750 N pe diametre, separat pentru curenți slabi.
 - Doze de aparat după numărul de module: simplă Ø60, dublă, triplă sau cvadruplă; priza combinată primește separator între 230 V și date.
-- Doze de derivație Ø80 sub plafon, câte una pe întrerupător cu lampă.
 - Doze de tragere și doză de racord fix.
 - Aparatele din tablou: disjunctoare pe calibre, diferențiale, AFDD, RCBO și cutia cu numărul de module.
 - Curenți slabi: cutie media, conectori RJ45, patch panel / switch, splitter, mufe F.
@@ -315,6 +314,5 @@ Răspunsuri primite (23.11.2026):
 - **Baia mare are cadă**, la capătul opus ușii, pe toată lățimea băii (170 × 70 cm). Aplicația desenează cada și avertizează dacă o priză sau un întrerupător e la mai puțin de 60 cm de ea. **Baia de serviciu nu are cadă.**
 - **Șapa e turnată direct pe placă (aderentă):** tuburile stau în cei 5 cm de șapă, fără strat de egalizare.
 
-Întrebări rămase:
-1. **Punctul media:** se pune lângă tablou, în Hol, sau în altă parte (de exemplu lângă intrarea cablului de la operator)?
-2. **Corpurile de iluminat:** nu sunt desenate. Am presupus o lumină în mijlocul camerei pentru fiecare clapă; aplicele și spoturile schimbă cantitățile.
+- **Cutia media (internet și TV) rămâne lângă tablou**, în Hol.
+- **Luminile nu se calculează:** traseele și materialele cuprind doar circuitele până la întrerupătoare (plus firele de comutare dintre cap-scară). Legătura întrerupător–lampă, dozele de sub plafon și corpurile de iluminat se stabilesc separat. Pentru căderea de tensiune la iluminat se ia 100 W pe clapă, minimum 300 W pe circuit.
