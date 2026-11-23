@@ -185,7 +185,7 @@ export const fm = v => v.toFixed(1).replace('.', ',');
 const ROLE = { L: 'maro (fază)', N: 'albastru (nul)', PE: 'galben-verde (PE)', R: 'negru (retur / comutare)' };
 const condLabel = (cab, n, sec) => cab === 'fy' ? `${n} × FY ${secTxt(sec)} mm²` : `CYY-F ${n}×${secTxt(sec)} mm²`;
 
-/* Diametrul tubului (I7 5.2.12.1.7 și tab. 5.7: S_i ≥ 3·S_c pentru conductoare; un singur cablu: D_i ≥ 1,5·D cablu) */
+/* Diametrul tubului (I7 5.2.12.1.7 și tab. 5.7: S_i ≥ 3·S_c pentru conductoare; un singur cablu: D_i ≥ 1,5·D cablu, I7 5.2.3.2.2) */
 function tubeIdx(spec, cab, k = 3) {
   let di;
   if (spec.data) di = Math.sqrt(4 * k * spec.data.reduce((s, D) => s + Math.PI * D * D / 4, 0) / Math.PI);
